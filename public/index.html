@@ -164,14 +164,14 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     <aside class="panel" aria-label="策略參數">
       <div class="panel-head">
         <h2>參數</h2>
-        <button type="button" id="reset">恢復回測設定</button>
+        <button type="button" id="reset">恢復預設參數</button>
       </div>
       <div id="fields"></div>
       <fieldset class="sync">
         <legend>雲端同步</legend>
         <div class="field"><label for="s_token">同步金鑰<span class="hint">與 Worker 上設定的 SYNC_TOKEN 相同</span></label><input type="password" id="s_token" autocomplete="off" spellcheck="false"></div>
         <p class="hint-p">金鑰只存在這台裝置，每台裝置要各填一次。</p>
-        <div class="row"><button type="button" id="s_save">儲存金鑰並同步</button><button type="button" id="s_now">立即同步</button></div>
+        <div class="row"><button type="button" id="s_save">儲存金鑰並同步</button></div>
         <p class="sync-status" id="s_status" aria-live="polite"></p>
       </fieldset>
     </aside>
@@ -234,7 +234,6 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
         <div class="row">
           <button type="button" id="d_apply">把結果記到本月帳務</button>
           <button type="button" id="d_newmonth">開始新月份</button>
-          <button type="button" id="d_clear">清除全部數據</button>
           <span class="copied" id="d_msg" aria-live="polite"></span>
         </div>
         <p class="note">張數計算會先扣手續費（依左側手續費參數），不含配息與補充保費。</p>
@@ -754,12 +753,6 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     saveDay(); refreshDay(); scheduleChart();
     flash(ok(c.cash) ? `已把可用現金 ${fmt(c.cash)} 元帶入「上月結轉」，請填新月份的月初收盤。` : '已清空本月狀態，請填上月結轉與月初收盤。');
   });
-  $('d_clear').addEventListener('click', () => {
-    DAY_NUM.forEach(id => $(id).value = ''); DAY_CHK.forEach(id => $(id).checked = false);
-    saveDay(); refreshDay(); scheduleChart();
-    flash('已清除全部數據。');
-  });
-  $('d_day').addEventListener('input', () => { if($('d_day').value.trim() !== '') $('d_hasdiv').checked = true; });
   $('d_hasdiv').addEventListener('change', () => {
     if($('d_hasdiv').checked){ if($('d_day').value.trim() === '') $('d_day').value = '0'; }
     else { ['d_day','d_xclose','d_xma'].forEach(id => $(id).value = ''); }
@@ -815,10 +808,16 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     let data = null; try{ data = await r.json(); }catch(e){}
     return {status:r.status, data};
   }
-  function failMsg(s){
+  function failMsg(s, d){
     if(s === 401) return '同步金鑰不正確。';
     if(s === 404 || s === 405) return '這個網址沒有同步服務（只在你部署的 Cloudflare Worker 網址上有效）。';
-    if(s === 500) return '同步服務還沒設定完成（請確認 KV 綁定 STATE 與 Secret SYNC_TOKEN）。';
+    if(s === 500){
+      const miss = d && Array.isArray(d.missing) ? d.missing : [];
+      const parts = [];
+      if(miss.includes('STATE')) parts.push('KV 綁定 STATE（確認 wrangler.jsonc 的 kv_namespaces）');
+      if(miss.includes('SYNC_TOKEN')) parts.push('Secret SYNC_TOKEN（Worker → Settings → Variables and Secrets，不是 Build 裡的那個）');
+      return parts.length ? '同步服務缺少設定：' + parts.join('、') + '。' : '同步服務還沒設定完成（請確認 KV 綁定 STATE 與 Secret SYNC_TOKEN）。';
+    }
     return '同步失敗（狀態 ' + s + '）。';
   }
   async function push(){
@@ -832,7 +831,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
         setStatus('另一台裝置先更新過，已改用雲端上的最新數據，剛才的修改請再確認一次。', 'warn');
       }
       else if(r.status === 409){ meta.version = 0; saveMeta(); retry = true; }
-      else setStatus(failMsg(r.status), 'warn');
+      else setStatus(failMsg(r.status, r.data), 'warn');
     }catch(e){ setStatus('無法連線到同步服務。', 'warn'); }
     finally{ busy = false; }
     if(retry) await push();
@@ -843,7 +842,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     try{
       setStatus('同步中…');
       const r = await api('GET');
-      if(r.status !== 200){ setStatus(failMsg(r.status), 'warn'); return; }
+      if(r.status !== 200){ setStatus(failMsg(r.status, r.data), 'warn'); return; }
       const st = r.data;
       if(!st){ doPush = true; }
       else if(st.version > meta.version){
@@ -865,11 +864,6 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
       if(!t){ setStatus('已移除同步金鑰，數據只存在這台裝置。'); return; }
       meta = {version:0, dirty:false}; saveMeta();
       pull();
-    });
-    $('s_now').addEventListener('click', () => {
-      if(!token()){ setStatus('請先填入同步金鑰。', 'warn'); return; }
-      clearTimeout(pushTimer);
-      if(meta.dirty) push(); else pull();
     });
     document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') pull(); });
     syncReady = true;

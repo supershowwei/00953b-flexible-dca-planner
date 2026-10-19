@@ -25,7 +25,10 @@ async function sameToken(a, b) {
 }
 
 async function handleState(request, env) {
-  if (!env.STATE || !env.SYNC_TOKEN) return json({ error: 'not configured' }, 500);
+  const missing = [];
+  if (!env.STATE) missing.push('STATE');
+  if (!env.SYNC_TOKEN) missing.push('SYNC_TOKEN');
+  if (missing.length) return json({ error: 'not configured', missing }, 500);
 
   const auth = request.headers.get('Authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
