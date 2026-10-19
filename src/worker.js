@@ -1,6 +1,7 @@
 // 00953B 參數流程圖：雲端同步服務
 // 網頁（public/index.html）由 Cloudflare 直接當靜態檔提供；
-// 只有 /api/state 這個路徑會進到這支程式，負責讀寫 KV 裡的同步數據。
+// /api/state 負責讀寫 KV 裡的同步數據；
+// /api/market 從玩股網日K API 算出今日判斷要用的行情數字。
 //
 // 需要的設定：
 //   - KV 綁定 STATE：寫在 wrangler.jsonc
@@ -60,10 +61,58 @@ async function handleState(request, env) {
   return json({ error: 'method not allowed' }, 405);
 }
 
+const CANDLES_URL = 'https://www.wantgoo.com/investrue/00953b/all-daily-candles';
+const RETRO_CANDLES_URL = 'https://www.wantgoo.com/investrue/00953b/all-retro-daily-candles';
+
+async function fetchCandles(url) {
+  const r = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+  if (!r.ok) throw new Error(`${url} 回應 ${r.status}`);
+  const rows = await r.json();
+  if (!Array.isArray(rows) || !rows.length) throw new Error(`${url} 沒有數據`);
+  return rows
+    .filter(x => x && typeof x.tradeDate === 'string' && Number.isFinite(x.close))
+    .sort((a, b) => (a.tradeDate < b.tradeDate ? -1 : a.tradeDate > b.tradeDate ? 1 : 0));
+}
+
+const mean = a => a.reduce((s, x) => s + x, 0) / a.length;
+const round = (v, d = 4) => Math.round(v * 10 ** d) / 10 ** d;
+
+async function handleMarket() {
+  let daily, retro;
+  try {
+    [daily, retro] = await Promise.all([fetchCandles(CANDLES_URL), fetchCandles(RETRO_CANDLES_URL)]);
+  } catch (e) {
+    return json({ error: 'upstream', message: String(e.message || e) }, 502);
+  }
+  if (daily.length < 60 || retro.length < 20) return json({ error: 'not enough data' }, 502);
+
+  const last = daily[daily.length - 1];
+  const retroLast = retro[retro.length - 1];
+  const closes = daily.map(x => x.close);
+  // 布林通道 20 日、2 倍標準差（母體標準差），用還原收盤計算
+  const r20 = retro.slice(-20).map(x => x.close);
+  const m20 = mean(r20);
+  const sd20 = Math.sqrt(mean(r20.map(x => (x - m20) ** 2)));
+  const month = last.tradeDate.slice(0, 7);
+  const monthFirst = daily.find(x => x.tradeDate.startsWith(month));
+
+  return json({
+    date: last.tradeDate,
+    retroDate: retroLast.tradeDate,
+    close: last.close,
+    ma5: round(mean(closes.slice(-5))),
+    ma60: round(mean(closes.slice(-60))),
+    bbLower: round(m20 - 2 * sd20),
+    monthOpenDate: monthFirst.tradeDate,
+    monthOpenClose: monthFirst.close,
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === '/api/state') return handleState(request, env);
+    if (url.pathname === '/api/market') return handleMarket();
     return env.ASSETS.fetch(request);
   },
 };

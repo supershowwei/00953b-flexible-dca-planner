@@ -151,13 +151,18 @@ details summary{cursor:pointer;font-weight:700}
 pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size:.8rem;line-height:1.5;white-space:pre}
 .row{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
 .copied{font-size:.85rem;color:var(--ok)}
+input[readonly]{background:transparent;border-style:dashed;cursor:default}
+.mkt{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 4px;flex-wrap:wrap}
+.mkt .hint-p{margin:0}
+.mkt .hint-p.warn{color:var(--warn)}
+.mkt button{font-size:.8rem;padding:2px 10px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>00953B 不定期不定額：參數流程圖</h1>
-    <p>每天收盤後在「今日判斷」填入數據，就能照流程圖得出今天該買幾張。左側是影響張數計算的規則數字，參數和數據都只存在這台裝置的瀏覽器裡。</p>
+    <p>每天收盤後打開「今日判斷」，行情會自動帶入，再補上日曆與帳務，就能照流程圖得出今天該買幾張。左側是影響張數計算的規則數字，參數和數據都只存在這台裝置的瀏覽器裡。</p>
   </header>
 
   <div class="layout">
@@ -191,14 +196,15 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
 
       <section class="card" aria-label="今日判斷">
         <h2>今日判斷</h2>
-        <p class="sub">每天收盤後填入當天的數據，頁面會照流程圖走一遍，並用粗框標出這次走過的路徑。欄位一開始都是空的，填過的數據只存在這台裝置的瀏覽器裡。</p>
+        <p class="sub">收盤價、MA5、MA60、還原 BB 下緣與月初收盤會自動從日K數據取得，其餘欄位每天收盤後自己填。頁面會照流程圖走一遍，並用粗框標出這次走過的路徑。</p>
         <div class="inputs">
           <fieldset class="grp">
             <legend>今日行情</legend>
-            <div class="field"><label for="d_close">收盤價</label><input type="number" id="d_close" step="0.01" min="0" inputmode="decimal" placeholder="例 9.58"></div>
-            <div class="field"><label for="d_ma5" id="lab_ma5">MA5<span class="hint">判斷加碼張數：收盤在 MA5 下方或上方</span></label><input type="number" id="d_ma5" step="0.0001" min="0" inputmode="decimal"></div>
-            <div class="field"><label for="d_ma" id="lab_ma">MA60<span class="hint">計算乖離，決定基本單張數</span></label><input type="number" id="d_ma" step="0.0001" min="0" inputmode="decimal"></div>
-            <div class="field"><label for="d_bbl" id="lab_bbl">還原 BB 下緣</label><input type="number" id="d_bbl" step="0.0001" min="0" inputmode="decimal"></div>
+            <div class="mkt"><p class="hint-p" id="m_status" aria-live="polite">行情載入中…</p><button type="button" id="m_reload">重新取得</button></div>
+            <div class="field"><label for="d_close">收盤價</label><input type="number" id="d_close" readonly tabindex="-1"></div>
+            <div class="field"><label for="d_ma5" id="lab_ma5">MA5<span class="hint">判斷加碼張數：收盤在 MA5 下方或上方</span></label><input type="number" id="d_ma5" readonly tabindex="-1"></div>
+            <div class="field"><label for="d_ma" id="lab_ma">MA60<span class="hint">計算乖離，決定基本單張數</span></label><input type="number" id="d_ma" readonly tabindex="-1"></div>
+            <div class="field"><label for="d_bbl" id="lab_bbl">還原 BB 下緣<span class="hint">還原收盤 20 日、2 倍標準差</span></label><input type="number" id="d_bbl" readonly tabindex="-1"></div>
             <div class="calc-line" id="d_bias_today"></div>
           </fieldset>
           <fieldset class="grp">
@@ -218,7 +224,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
           <fieldset class="grp">
             <legend>本月現金</legend>
             <div class="field"><label for="d_carry">上月結轉現金（元）<span class="hint">按「開始新月份」會自動帶入</span></label><input type="number" id="d_carry" step="1" min="0" inputmode="numeric" placeholder="0"></div>
-            <div class="field"><label for="d_mopen">月初收盤<span class="hint">本月第一個交易日的收盤，用來算本月預算</span></label><input type="number" id="d_mopen" step="0.01" min="0" inputmode="decimal"></div>
+            <div class="field"><label for="d_mopen">月初收盤<span class="hint" id="d_mopen_hint">本月第一個交易日的收盤，用來算本月預算</span></label><input type="number" id="d_mopen" readonly tabindex="-1"></div>
             <div class="field"><label for="d_div">本月已入帳配息（元）<span class="hint">扣補充保費後的實收</span></label><input type="number" id="d_div" step="1" min="0" inputmode="numeric" placeholder="0"></div>
             <div class="field"><label for="d_spent">本月已花費（元）<span class="hint">含手續費；按「記到本月帳務」會自動累加</span></label><input type="number" id="d_spent" step="1" min="0" inputmode="numeric" placeholder="0"></div>
             <div class="cash-sum" id="d_cashsum"></div>
@@ -357,7 +363,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     const addT = q.addDown === 'all' ? '全部現金池' : q.addDown + ' 張';
     const L = ['flowchart TD'];
     L.push(`A["每月開始<br/>新增 ${P('budget', q.budget + ' 張')}等值預算<br/>（月初收盤 × ${P('budget', fmt(q.budget*1000))} 股）<br/>已入帳配息併入現金池"]`);
-    L.push(`A --> B["每日收盤後填入<br/>收盤、MA5、MA60<br/>${bb}價 BB 下緣"]`);
+    L.push(`A --> B["每日收盤後取得<br/>收盤、MA5、MA60<br/>${bb}價 BB 下緣"]`);
     L.push(`B --> C{"收盤 ≤<br/>${bb} BB 下緣？"}`);
     L.push(`C -- 是 --> D{"本月基本單<br/>已經下了？"}`);
     if(q.moveBase){
@@ -491,7 +497,8 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
   function cost(n, unit){ return n * unit + fee(n * unit); }
   function maxAff(cash, unit){ let n = 0; while(cost(n + 1, unit) <= cash && n < 10000) n++; return n; }
 
-  const DAY_NUM = ['d_close','d_ma5','d_ma','d_bbl','d_day','d_xclose','d_xma','d_carry','d_mopen','d_div','d_spent'];
+  // 收盤價、MA5、MA60、BB 下緣、月初收盤由 /api/market 帶入，不存也不同步
+  const DAY_NUM = ['d_day','d_xclose','d_xma','d_carry','d_div','d_spent'];
   const DAY_CHK = ['d_hasdiv','d_last','d_dec','d_based','d_addon'];
   const DAY_STORE = '00953b-flow-day-v1';
   function saveDay(){
@@ -513,7 +520,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
 
   function updateDayLabels(){
     const bb = p.bbBase === 'adj' ? '還原' : '原始';
-    $('lab_bbl').textContent = `${bb} BB 下緣`;
+    $('lab_bbl').firstChild.textContent = `${bb} BB 下緣`;
   }
 
   function baseLots(cash, unit, bias, dec, bought){
@@ -745,10 +752,10 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
   $('d_newmonth').addEventListener('click', () => {
     const c = cashInfo();
     if(ok(c.cash)) $('d_carry').value = Math.round(c.cash);
-    ['d_day','d_xclose','d_xma','d_mopen','d_div','d_spent'].forEach(id => $(id).value = '');
+    ['d_day','d_xclose','d_xma','d_div','d_spent'].forEach(id => $(id).value = '');
     ['d_based','d_addon','d_last','d_hasdiv','d_dec'].forEach(id => $(id).checked = false);
     saveDay(); refreshDay(); scheduleChart();
-    flash(ok(c.cash) ? `已把可用現金 ${fmt(c.cash)} 元帶入「上月結轉」，請填新月份的月初收盤。` : '已清空本月狀態，請填上月結轉與月初收盤。');
+    flash(ok(c.cash) ? `已把可用現金 ${fmt(c.cash)} 元帶入「上月結轉」。` : '已清空本月狀態，請填上月結轉。');
   });
   $('d_hasdiv').addEventListener('change', () => {
     if($('d_hasdiv').checked){ if($('d_day').value.trim() === '') $('d_day').value = '0'; }
@@ -761,6 +768,35 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     $(id).addEventListener('input', () => { saveDay(); refreshDay(); lastChanged = null; scheduleChart(); });
     $(id).addEventListener('change', () => { saveDay(); refreshDay(); lastChanged = null; scheduleChart(); });
   });
+
+  /* ---------- 行情 ---------- */
+  const MARKET_URL = '/api/market';
+  let mktBusy = false;
+  function mktStatus(t, warn){ const el = $('m_status'); el.textContent = t; el.classList.toggle('warn', !!warn); }
+  function taipeiToday(){ return new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Taipei'}).format(new Date()); }
+  async function loadMarket(){
+    if(mktBusy) return;
+    mktBusy = true; $('m_reload').disabled = true;
+    try{
+      const r = await fetch(MARKET_URL, {cache:'no-store'});
+      let m = null; try{ m = await r.json(); }catch(e){}
+      if(!r.ok || !m || !isFinite(m.close)){
+        mktStatus(r.status === 404 || r.status === 405 ? '這個網址沒有行情服務（只在你部署的 Cloudflare Worker 網址上有效）。' : '取得行情失敗' + (m && m.message ? '：' + m.message : '（狀態 ' + r.status + '）') + '。', true);
+        return;
+      }
+      $('d_close').value = m.close; $('d_ma5').value = m.ma5; $('d_ma').value = m.ma60;
+      $('d_bbl').value = m.bbLower; $('d_mopen').value = m.monthOpenClose;
+      $('d_mopen_hint').textContent = `${m.monthOpenDate} 的收盤，用來算本月預算`;
+      const warns = [];
+      if(m.date !== taipeiToday()) warns.push('不是今天的數據');
+      if(m.retroDate !== m.date) warns.push(`還原日K只到 ${m.retroDate}`);
+      mktStatus(`行情日期 ${m.date}` + (warns.length ? `（${warns.join('，')}）` : ''), warns.length > 0);
+      refreshDay(); scheduleChart();
+    }catch(e){ mktStatus('無法連線到行情服務。', true); }
+    finally{ mktBusy = false; $('m_reload').disabled = false; }
+  }
+  $('m_reload').addEventListener('click', loadMarket);
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') loadMarket(); });
 
   /* ---------- 雲端同步 ---------- */
   const TOKEN_KEY = '00953b-sync-token', META_KEY = '00953b-sync-meta';
@@ -879,6 +915,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
   new MutationObserver(() => { lastChanged = null; renderChart(); }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
 
   loadDay(); syncInputs(); updateDayLabels(); refreshDay();
+  loadMarket();
   syncInit();
   const go = () => renderChart();
   if(document.fonts && document.fonts.ready){ document.fonts.ready.then(go, go); } else { go(); }
