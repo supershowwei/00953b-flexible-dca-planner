@@ -196,7 +196,8 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
           <fieldset class="grp">
             <legend>今日行情</legend>
             <div class="field"><label for="d_close">收盤價</label><input type="number" id="d_close" step="0.01" min="0" inputmode="decimal" placeholder="例 9.58"></div>
-            <div class="field"><label for="d_ma" id="lab_ma">均線（MA）</label><input type="number" id="d_ma" step="0.0001" min="0" inputmode="decimal"></div>
+            <div class="field"><label for="d_ma5" id="lab_ma5">MA5<span class="hint">判斷加碼張數：收盤在 MA5 下方或上方</span></label><input type="number" id="d_ma5" step="0.0001" min="0" inputmode="decimal"></div>
+            <div class="field"><label for="d_ma" id="lab_ma">MA60<span class="hint">計算乖離，決定基本單張數</span></label><input type="number" id="d_ma" step="0.0001" min="0" inputmode="decimal"></div>
             <div class="field"><label for="d_bbl" id="lab_bbl">還原 BB 下緣</label><input type="number" id="d_bbl" step="0.0001" min="0" inputmode="decimal"></div>
             <div class="calc-line" id="d_bias_today"></div>
           </fieldset>
@@ -211,7 +212,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
             <legend>除息日數據</legend>
             <p class="hint-p ex-note" id="d_exnote"></p>
             <div class="field"><label for="d_xclose">除息日收盤</label><input type="number" id="d_xclose" step="0.01" min="0" inputmode="decimal"></div>
-            <div class="field"><label for="d_xma" id="lab_xma">除息日均線（MA）</label><input type="number" id="d_xma" step="0.0001" min="0" inputmode="decimal"></div>
+            <div class="field"><label for="d_xma" id="lab_xma">除息日 MA60</label><input type="number" id="d_xma" step="0.0001" min="0" inputmode="decimal"></div>
             <div class="calc-line" id="d_bias_ex"></div>
           </fieldset>
           <fieldset class="grp">
@@ -356,7 +357,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     const addT = q.addDown === 'all' ? '全部現金池' : q.addDown + ' 張';
     const L = ['flowchart TD'];
     L.push(`A["每月開始<br/>新增 ${P('budget', q.budget + ' 張')}等值預算<br/>（月初收盤 × ${P('budget', fmt(q.budget*1000))} 股）<br/>已入帳配息併入現金池"]`);
-    L.push(`A --> B["每日收盤後填入<br/>收盤、MA、${bb}價 BB 下緣"]`);
+    L.push(`A --> B["每日收盤後填入<br/>收盤、MA5、MA60<br/>${bb}價 BB 下緣"]`);
     L.push(`B --> C{"收盤 ≤<br/>${bb} BB 下緣？"}`);
     L.push(`C -- 是 --> D{"本月基本單<br/>已經下了？"}`);
     if(q.moveBase){
@@ -367,7 +368,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     }
     L.push(`D -- 是 --> X{"基本單之後的<br/>第一次觸發？"}`);
     L.push(`X -- 否 --> H["忽略"]`);
-    L.push(`X -- 是 --> F{"收盤在<br/>MA 下方？"}`);
+    L.push(`X -- 是 --> F{"收盤在<br/>MA5 下方？"}`);
     L.push(`F -- 是 --> G["加碼單：${addT}<br/>${ex}"]`);
     if(q.upAdd > 0) L.push(`F -- 否 --> G2["加碼單：${P('upAdd', q.upAdd + ' 張')}<br/>${ex}"]`);
     else L.push(`F -- 否 --> H2["不加碼<br/>本月加碼機會用掉"]`);
@@ -382,7 +383,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
       `${P('deep', fmtPct(q.deep))} ＜ 乖離 ＜ 0：${P('mid', q.mid + ' 張')}`,
       `乖離 ≤ ${P('deep', fmtPct(q.deep))}：${P('budget', q.budget + ' 張')} ＋ 全部現金池`];
     if(q.decClear) ks.push('12 月：預算＋現金池全部買');
-    L.push(`K["基本單張數（依除息日乖離）<br/>${ks.join('<br/>')}"]`);
+    L.push(`K["基本單張數（依除息日乖離）<br/>乖離 = 收盤 ÷ MA60 − 1<br/>${ks.join('<br/>')}"]`);
     if(q.moveBase) L.push('E --> K');
     L.push('E2 --> K');
     L.push(`Q["資金不足時<br/>買得起的最大張數"]`);
@@ -440,7 +441,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     const w = [];
     if(p.up > p.budget) w.push(`線上張數（${p.up}）大於每月預算（${p.budget}），線上月份會反過來消耗現金池。`);
     if(p.up === p.budget) w.push('線上張數等於每月預算，線上月份不會少買，現金池只能靠配息累積。');
-    if(p.mid < p.budget) w.push(`小幅線下張數（${p.mid}）小於每月預算，跌破均線反而買得比較少。`);
+    if(p.mid < p.budget) w.push(`小幅線下張數（${p.mid}）小於每月預算，跌破 MA60 反而買得比較少。`);
     if(p.mid < p.up) w.push('小幅線下張數小於線上張數，與「線下多買」的方向相反。');
     if(p.monthCap < p.mid) w.push(`單月上限（${p.monthCap}）小於小幅線下張數（${p.mid}），小幅線下時永遠買不到設定的張數。`);
     if(p.monthCap < p.budget) w.push(`單月上限（${p.monthCap}）小於每月預算（${p.budget}），每月都會有錢買不完。`);
@@ -490,7 +491,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
   function cost(n, unit){ return n * unit + fee(n * unit); }
   function maxAff(cash, unit){ let n = 0; while(cost(n + 1, unit) <= cash && n < 10000) n++; return n; }
 
-  const DAY_NUM = ['d_close','d_ma','d_bbl','d_day','d_xclose','d_xma','d_carry','d_mopen','d_div','d_spent'];
+  const DAY_NUM = ['d_close','d_ma5','d_ma','d_bbl','d_day','d_xclose','d_xma','d_carry','d_mopen','d_div','d_spent'];
   const DAY_CHK = ['d_hasdiv','d_last','d_dec','d_based','d_addon'];
   const DAY_STORE = '00953b-flow-day-v1';
   function saveDay(){
@@ -537,8 +538,8 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     let n, why;
     if(below){
       n = p.addDown === 'all' ? aff : +p.addDown;
-      why = p.addDown === 'all' ? '收盤在均線下方 → 加碼動用全部現金池。' : `收盤在均線下方 → 加碼 ${p.addDown} 張。`;
-    } else { n = p.upAdd; why = `收盤在均線上方 → 加碼 ${p.upAdd} 張。`; }
+      why = p.addDown === 'all' ? '收盤在 MA5 下方 → 加碼動用全部現金池。' : `收盤在 MA5 下方 → 加碼 ${p.addDown} 張。`;
+    } else { n = p.upAdd; why = `收盤在 MA5 上方 → 加碼 ${p.upAdd} 張。`; }
     if(n > aff){ n = aff; why += aff === 0 ? '現金不足 1 張，不買。' : `現金扣掉手續費後只夠 ${aff} 張。`; }
     return {n, why};
   }
@@ -561,7 +562,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
 
   let decision = null;
   function decide(){
-    const v = {close:g('d_close'), ma:g('d_ma'), bbl:g('d_bbl'), open:NaN, day:g('d_day'),
+    const v = {close:g('d_close'), ma5:g('d_ma5'), ma:g('d_ma'), bbl:g('d_bbl'), open:NaN, day:g('d_day'),
       xclose:g('d_xclose'), xma:g('d_xma'), cash:cashInfo().cash, bought:0};
     const hasDiv = $('d_hasdiv').checked, isLast = $('d_last').checked, dec = $('d_dec').checked;
     const based = $('d_based').checked, addonUsed = $('d_addon').checked;
@@ -573,7 +574,8 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
 
     const miss = [];
     if(!ok(v.close)) miss.push('收盤價');
-    if(!ok(v.ma)) miss.push('均線（MA）');
+    if(!ok(v.ma5)) miss.push('MA5');
+    if(!ok(v.ma)) miss.push('MA60');
     if(!ok(v.bbl)) miss.push(`${bb} BB 下緣`);
     if(!ok(v.cash)) miss.push('月初收盤');
     if(miss.length) return {miss, path:[]};
@@ -581,7 +583,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     const steps = [], path = ['A','B','C'];
     const trig = v.close <= v.bbl;
     const biasToday = v.close / v.ma - 1;
-    const below = v.close < v.ma;
+    const below = v.close < v.ma5;
     const exPassed = hasDiv && ok(v.day) && v.day >= 0;
     let action = {type:'none', n:0, price:v.close, why:''}, consume = false, setBased = false;
 
@@ -615,7 +617,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
           path.push('E','K','Q','R');
           const price = p.exec === 'next' ? (ok(v.open) ? v.open : v.close) : v.close;
           const r = doBase(price, p.exec === 'next' ? '隔日開盤' : '當日盤後定價');
-          if(r.needEx) return {miss:['除息日收盤','除息日均線（MA）'], path, exNote:true};
+          if(r.needEx) return {miss:['除息日收盤','除息日 MA60'], path, exNote:true};
           consume = true;
         } else {
           steps.push('本月基本單還沒下，但設定為不提前 → 照原定日判斷。');
@@ -630,11 +632,11 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
           const unit = Math.round(price * 1000);
           if(below || p.upAdd > 0){
             const r = addonLots(v.cash, unit, below, dec, v.bought);
-            steps.push(`收盤 ${px(v.close)} ${below ? '＜' : '≥'} MA ${px(v.ma)}。`, r.why);
+            steps.push(`收盤 ${px(v.close)} ${below ? '＜' : '≥'} MA5 ${px(v.ma5)}。`, r.why);
             action = {type:'addon', n:r.n, price, why:r.why, label: p.exec === 'next' ? '隔日開盤' : '當日盤後定價'};
             path.push(below ? 'G' : 'G2','Q','R');
           } else {
-            steps.push(`收盤 ${px(v.close)} ≥ MA ${px(v.ma)} → 不加碼，本月加碼機會用掉。`);
+            steps.push(`收盤 ${px(v.close)} ≥ MA5 ${px(v.ma5)} → 不加碼，本月加碼機會用掉。`);
             path.push('H2','R');
           }
           consume = true;
@@ -656,7 +658,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
         else {
           path.push('E2','K','Q','R');
           const r = doBase(v.close, '當日盤後定價');
-          if(r.needEx) return {miss:['除息日收盤','除息日均線（MA）'], path, exNote:true};
+          if(r.needEx) return {miss:['除息日收盤','除息日 MA60'], path, exNote:true};
         }
       }
     }
@@ -702,10 +704,10 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     const fs = $('d_xclose').closest('fieldset'), note = $('d_exnote');
     const xc = $('d_xclose'), xm = $('d_xma');
     let off = true, lock = true, txt, need = false;
-    if(!has){ txt = '還沒除息（或本月不除息）：不需要除息日數據。除息日當天勾選「本月已除息」，會自動帶入當天的收盤與均線。'; }
+    if(!has){ txt = '還沒除息（或本月不除息）：不需要除息日數據。除息日當天勾選「本月已除息」，會自動帶入當天的收盤與 MA60。'; }
     else if(!ok(day)){ txt = '請填今天是除息後第幾個交易日（除息日為 0）。'; need = true; }
     else if(day === 0){
-      off = false; txt = '今天是除息日：已自動帶入今日收盤與均線，之後幾天會保留。';
+      off = false; txt = '今天是除息日：已自動帶入今日收盤與 MA60，之後幾天會保留。';
       let changed = false;
       if($('d_close').value !== '' && xc.value !== $('d_close').value){ xc.value = $('d_close').value; changed = true; }
       if($('d_ma').value !== '' && xm.value !== $('d_ma').value){ xm.value = $('d_ma').value; changed = true; }
@@ -714,7 +716,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
       off = false; lock = false;
       const filled = ok(g('d_xclose')) && ok(g('d_xma'));
       need = !filled;
-      txt = filled ? `已過除息日（今天是第 ${day} 個交易日）：基本單用這裡的乖離。` : `已過除息日（今天是第 ${day} 個交易日）：請補填除息日的收盤與均線。`;
+      txt = filled ? `已過除息日（今天是第 ${day} 個交易日）：基本單用這裡的乖離。` : `已過除息日（今天是第 ${day} 個交易日）：請補填除息日的收盤與 MA60。`;
     }
     fs.classList.toggle('off', off);
     xc.disabled = lock; xm.disabled = lock;
