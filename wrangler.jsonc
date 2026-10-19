@@ -1,0 +1,20 @@
+{
+  // Worker 名稱：要跟 Cloudflare 後台匯入 GitHub 時填的 Worker 名稱一致
+  "name": "00953b",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-09-01",
+
+  // 網頁靜態檔：public 資料夾裡的 index.html
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+
+  // 同步數據存放的 KV
+  "kv_namespaces": [
+    {
+      "binding": "STATE",
+      "id": "請換成你的 KV namespace ID"
+    }
+  ]
+}

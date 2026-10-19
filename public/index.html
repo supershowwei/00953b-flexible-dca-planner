@@ -1,0 +1,897 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>00953B 不定期不定額：參數流程圖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E8EDF1; --surface:#F7F9FB; --ink:#17232F; --muted:#56687A; --line:#C6D0DA;
+  --accent:#1D5F7A; --accent-soft:#D5E6EE; --amber:#8F5A0E; --amber-soft:#F2E4CB;
+  --grey-soft:#E0E5EA; --warn:#8A3B12; --warn-soft:#F5E1D4; --ok:#2C5F45; --ok-soft:#DCEBE2;
+  --hit:#E8461A; --hit-glow:rgba(232,70,26,.55);
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --hit:#FF7A45; --hit-glow:rgba(255,122,69,.6);
+    --bg:#101B23; --surface:#172530; --ink:#E2E9EF; --muted:#94A6B5; --line:#2B3C49;
+    --accent:#72B8D4; --accent-soft:#1C3B4A; --amber:#E3B260; --amber-soft:#3A2D16;
+    --grey-soft:#22323D; --warn:#F2A57C; --warn-soft:#3C2519; --ok:#8FCBA8; --ok-soft:#1D3528;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --hit:#FF7A45; --hit-glow:rgba(255,122,69,.6);
+  --bg:#101B23; --surface:#172530; --ink:#E2E9EF; --muted:#94A6B5; --line:#2B3C49;
+  --accent:#72B8D4; --accent-soft:#1C3B4A; --amber:#E3B260; --amber-soft:#3A2D16;
+  --grey-soft:#22323D; --warn:#F2A57C; --warn-soft:#3C2519; --ok:#8FCBA8; --ok-soft:#1D3528;
+  color-scheme: dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",sans-serif;
+  font-size:15px; line-height:1.65; font-variant-numeric:tabular-nums;
+}
+.wrap{max-width:1320px;margin:0 auto;padding:28px 20px 56px}
+header{max-width:72ch;margin-bottom:22px}
+h1{
+  font-family:"Noto Serif TC","Songti TC","PMingLiU",serif;
+  font-size:clamp(1.45rem,1.1rem + 1.4vw,2rem); line-height:1.3; margin:0 0 8px; font-weight:700;
+}
+header p{margin:0;color:var(--muted)}
+h2{font-family:"Noto Serif TC","Songti TC","PMingLiU",serif;font-size:1.15rem;margin:0 0 12px;font-weight:600}
+
+.layout{display:grid;grid-template-columns:330px minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:920px){.layout{grid-template-columns:1fr}}
+
+.panel{
+  background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px 18px 8px;
+  position:sticky; top:calc(env(safe-area-inset-top,0px) + 16px);
+  max-height:calc(100vh - 32px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)); overflow:auto;
+}
+@media (max-width:920px){.panel{position:static;max-height:none}}
+.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px}
+.panel-head h2{margin:0}
+fieldset{border:0;border-top:1px solid var(--line);margin:0;padding:12px 0 10px}
+legend{font-weight:700;font-size:.92rem;padding:0 6px 0 0;color:var(--accent)}
+.field{display:grid;grid-template-columns:1fr 104px;align-items:center;gap:10px;margin:7px 0}
+.field label{font-size:.92rem}
+.field .hint{display:block;font-size:.78rem;color:var(--muted);line-height:1.35}
+.field.changed label{font-weight:700}
+.field.changed label::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--amber);margin-left:6px;vertical-align:middle}
+.field.disabled{opacity:.45}
+input[type=number],input[type=password],select{
+  width:100%; font:inherit; color:var(--ink); background:var(--bg);
+  border:1px solid var(--line); border-radius:8px; padding:5px 8px; text-align:right;
+}
+select{text-align:left}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent);justify-self:end}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{
+  font:inherit; font-size:.88rem; color:var(--accent); background:transparent;
+  border:1px solid var(--accent); border-radius:999px; padding:4px 14px; cursor:pointer;
+}
+button:hover{background:var(--accent-soft)}
+
+.main{display:flex;flex-direction:column;gap:20px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.status{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.badge{border-radius:10px;padding:8px 12px;font-size:.9rem;line-height:1.5}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.dev{background:var(--amber-soft);color:var(--amber)}
+.warns{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.warns li{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:7px 12px;font-size:.88rem}
+
+.chart{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.chart svg{display:block;margin:0 auto;min-width:600px;max-width:100%;height:auto}
+.chart .err{color:var(--warn)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;font-size:.85rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:4px;border:1.5px solid}
+.sw.base{background:var(--accent-soft);border-color:var(--accent)}
+.sw.add{background:var(--amber-soft);border-color:var(--amber)}
+.sw.skip{background:var(--grey-soft);border-color:var(--line)}
+.sw.pvs{background:transparent;border:0;border-bottom:2px solid var(--accent);border-radius:0;width:18px;height:10px}
+
+.pv{font-weight:700;color:var(--accent);border-bottom:2px solid currentColor;padding:0 1px}
+.pv.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%{background:var(--amber-soft);color:var(--amber)}100%{background:transparent}}
+@media (prefers-reduced-motion: reduce){.pv.flash{animation:none;background:var(--amber-soft)}}
+
+.calc{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+@media (max-width:700px){.calc{grid-template-columns:1fr}}
+.calc h3{font-size:1rem;margin:0 0 8px}
+.calc .field{grid-template-columns:1fr 120px}
+.result{margin-top:10px;background:var(--bg);border-radius:10px;padding:10px 12px}
+.result .big{font-size:1.25rem;font-weight:700}
+.result .why{font-size:.86rem;color:var(--muted);margin-top:4px}
+.note{font-size:.82rem;color:var(--muted);margin:12px 0 0}
+
+.sub{margin:-4px 0 14px;color:var(--muted);font-size:.9rem;max-width:72ch}
+.inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 22px}
+@media (max-width:760px){.inputs{grid-template-columns:1fr}}
+.inputs .field{grid-template-columns:1fr 120px}
+.grp{border-top:1px solid var(--line)}
+.hint-p{margin:0 0 4px;font-size:.8rem;color:var(--muted)}
+.calc-line{font-size:.86rem;color:var(--accent);min-height:1.3em;text-align:right}
+.result ol{margin:8px 0 0;padding-left:1.4em;font-size:.88rem;color:var(--muted)}
+.result .miss{color:var(--warn)}
+.result .monthend{margin-top:6px;font-size:.88rem;color:var(--amber)}
+button:disabled{opacity:.4;cursor:default;background:transparent}
+.sync .row{margin-top:4px}
+.sync .sync-url{grid-template-columns:1fr}
+.sync input[type=url]{width:100%;font:inherit;font-size:.82rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
+.sync input[type=password]{text-align:left}
+.sync-status{font-size:.82rem;color:var(--muted);margin:8px 0 2px;line-height:1.45}
+.sync-status.ok{color:var(--ok)}
+.sync-status.warn{color:var(--warn)}
+.grp.off .field, .field.off{opacity:.42}
+.ex-note{color:var(--accent);font-weight:500}
+.ex-note.need{color:var(--amber)}
+.cash-sum{margin:8px 0 4px;padding:8px 10px;border-radius:10px;background:var(--accent-soft);font-size:.88rem}
+.cash-sum .ln{display:flex;justify-content:space-between;gap:10px}
+.cash-sum .ln.total{font-weight:700;font-size:.98rem;border-top:1px solid var(--line);margin-top:4px;padding-top:4px}
+.cash-sum .ln span:last-child{white-space:nowrap}
+.sw.hit{background:transparent;border:3px solid var(--hit);box-shadow:0 0 6px var(--hit-glow)}
+.chart .node.hit{filter:drop-shadow(0 0 7px var(--hit-glow))}
+.chart.has-path .node:not(.hit){opacity:.38}
+.chart.has-path .flowchart-link{opacity:.3}
+.chart.has-path .flowchart-link.hit-edge{opacity:1;stroke:var(--hit) !important;stroke-width:3.5px !important}
+details summary{cursor:pointer;font-weight:700}
+.code-wrap{overflow-x:auto;margin-top:10px}
+pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size:.8rem;line-height:1.5;white-space:pre}
+.row{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.copied{font-size:.85rem;color:var(--ok)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>00953B 不定期不定額：參數流程圖</h1>
+    <p>每天收盤後在「今日判斷」填入數據，就能照流程圖得出今天該買幾張。左側是影響張數計算的規則數字，參數和數據都只存在這台裝置的瀏覽器裡。</p>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" aria-label="策略參數">
+      <div class="panel-head">
+        <h2>參數</h2>
+        <button type="button" id="reset">恢復回測設定</button>
+      </div>
+      <div id="fields"></div>
+      <fieldset class="sync">
+        <legend>雲端同步</legend>
+        <div class="field"><label for="s_token">同步金鑰<span class="hint">與 Worker 上設定的 SYNC_TOKEN 相同</span></label><input type="password" id="s_token" autocomplete="off" spellcheck="false"></div>
+        <p class="hint-p">金鑰只存在這台裝置，每台裝置要各填一次。</p>
+        <div class="row"><button type="button" id="s_save">儲存金鑰並同步</button><button type="button" id="s_now">立即同步</button></div>
+        <p class="sync-status" id="s_status" aria-live="polite"></p>
+      </fieldset>
+    </aside>
+
+    <div class="main">
+
+      <section class="card" aria-label="流程圖">
+        <h2>流程圖</h2>
+        <div class="chart" id="chart"><p>流程圖載入中…</p></div>
+        <div class="legend">
+          <span><i class="sw base"></i>基本單</span>
+          <span><i class="sw add"></i>加碼單</span>
+          <span><i class="sw skip"></i>不動作</span>
+          <span><i class="sw pvs"></i>可調參數（剛改過的會閃一下）</span>
+          <span><i class="sw hit"></i>今日判斷走過的路徑（其他節點會變淡）</span>
+        </div>
+      </section>
+
+      <section class="card" aria-label="今日判斷">
+        <h2>今日判斷</h2>
+        <p class="sub">每天收盤後填入當天的數據，頁面會照流程圖走一遍，並用粗框標出這次走過的路徑。欄位一開始都是空的，填過的數據只存在這台裝置的瀏覽器裡。</p>
+        <div class="inputs">
+          <fieldset class="grp">
+            <legend>今日行情</legend>
+            <div class="field"><label for="d_close">收盤價</label><input type="number" id="d_close" step="0.01" min="0" inputmode="decimal" placeholder="例 9.58"></div>
+            <div class="field"><label for="d_ma" id="lab_ma">均線（MA）</label><input type="number" id="d_ma" step="0.0001" min="0" inputmode="decimal"></div>
+            <div class="field" id="row_adj"><label for="d_adj">還原收盤<span class="hint">券商「還原權值」K 線的收盤</span></label><input type="number" id="d_adj" step="0.0001" min="0" inputmode="decimal"></div>
+            <div class="field"><label for="d_bbl" id="lab_bbl">還原 BB 下緣</label><input type="number" id="d_bbl" step="0.0001" min="0" inputmode="decimal"></div>
+            <div class="calc-line" id="d_bias_today"></div>
+          </fieldset>
+          <fieldset class="grp">
+            <legend>日曆</legend>
+            <div class="field"><label for="d_hasdiv">本月已除息<span class="hint">除息日當天勾選，之前不用勾</span></label><input type="checkbox" id="d_hasdiv"></div>
+            <div class="field"><label for="d_day">今天是除息後第幾個交易日<span class="hint">除息日為 0，之後每個交易日加 1</span></label><input type="number" id="d_day" step="1" min="0" inputmode="numeric"></div>
+            <div class="field"><label for="d_last">今天是本月最後交易日</label><input type="checkbox" id="d_last"></div>
+            <div class="field"><label for="d_dec">本月是 12 月</label><input type="checkbox" id="d_dec"></div>
+          </fieldset>
+          <fieldset class="grp">
+            <legend>除息日數據</legend>
+            <p class="hint-p ex-note" id="d_exnote"></p>
+            <div class="field"><label for="d_xclose">除息日收盤</label><input type="number" id="d_xclose" step="0.01" min="0" inputmode="decimal"></div>
+            <div class="field"><label for="d_xma" id="lab_xma">除息日均線（MA）</label><input type="number" id="d_xma" step="0.0001" min="0" inputmode="decimal"></div>
+            <div class="calc-line" id="d_bias_ex"></div>
+          </fieldset>
+          <fieldset class="grp">
+            <legend>本月現金</legend>
+            <div class="field"><label for="d_carry">上月結轉現金（元）<span class="hint">按「開始新月份」會自動帶入</span></label><input type="number" id="d_carry" step="1" min="0" inputmode="numeric" placeholder="0"></div>
+            <div class="field"><label for="d_mopen">月初收盤<span class="hint">本月第一個交易日的收盤，用來算本月預算</span></label><input type="number" id="d_mopen" step="0.01" min="0" inputmode="decimal"></div>
+            <div class="field"><label for="d_div">本月已入帳配息（元）<span class="hint">扣補充保費後的實收</span></label><input type="number" id="d_div" step="1" min="0" inputmode="numeric" placeholder="0"></div>
+            <div class="field"><label for="d_spent">本月已花費（元）<span class="hint">含手續費；按「記到本月帳務」會自動累加</span></label><input type="number" id="d_spent" step="1" min="0" inputmode="numeric" placeholder="0"></div>
+            <div class="cash-sum" id="d_cashsum"></div>
+          </fieldset>
+          <fieldset class="grp">
+            <legend>本月進度</legend>
+            <div class="field"><label for="d_based">本月基本單已下</label><input type="checkbox" id="d_based"></div>
+            <div class="field"><label for="d_addon">本月加碼機會已用掉<span class="hint">已加碼、已判定不加碼，或基本單是觸發提前下的</span></label><input type="checkbox" id="d_addon"></div>
+          </fieldset>
+        </div>
+        <div class="result" id="d_out" aria-live="polite"></div>
+        <div class="row">
+          <button type="button" id="d_apply">把結果記到本月帳務</button>
+          <button type="button" id="d_newmonth">開始新月份</button>
+          <button type="button" id="d_clear">清除全部數據</button>
+          <span class="copied" id="d_msg" aria-live="polite"></span>
+        </div>
+        <p class="note">張數計算會先扣手續費（依左側手續費參數），不含配息與補充保費。</p>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+(function(){
+  const DEFAULTS = {
+    budget:5, up:4, mid:6, deep:-2,
+    wait:3,
+    poolCap:5,
+    feeRate:0.1425, feeDisc:0.28, feeMin:1
+  };
+  const NAMES = {
+    budget:'每月預算', up:'線上張數', mid:'小幅線下張數', deep:'深跌門檻', monthCap:'單月上限',
+    decClear:'12 月清空',
+    wait:'基本單日', poolCapOn:'現金池上限開關',
+    poolCap:'現金池上限', addDown:'線下加碼', upAdd:'線上加碼'
+  };
+  const FEE_KEYS = ['feeRate','feeDisc','feeMin'];
+  const addOpts = [['all','全部現金池']].concat(Array.from({length:10},(_,i)=>[String(i+1),(i+1)+' 張']));
+  const GROUPS = [
+    {title:'基本單', fields:[
+      {k:'budget', label:'每月預算（張）', min:1, max:30, step:1},
+      {k:'wait', label:'除息後第幾個交易日下單', hint:'沒有觸發時的基本單日', min:0, max:15, step:1},
+      {k:'up', label:'線上：基本單張數', hint:'乖離 ≥ 0', min:0, max:30, step:1},
+      {k:'mid', label:'小幅線下：基本單張數', hint:'門檻 ＜ 乖離 ＜ 0', min:0, max:30, step:1},
+      {k:'deep', label:'深跌門檻（%）', hint:'乖離 ≤ 此值：預算＋全部現金池', min:-15, max:-0.1, step:0.1},
+    ]},
+    {title:'現金池', fields:[
+      {k:'poolCap', label:'現金池上限（張）', min:1, max:60, step:1}
+    ]},
+    {title:'手續費（用於計算張數）', fields:[
+      {k:'feeRate', label:'手續費率（%）', min:0, max:1, step:0.0001},
+      {k:'feeDisc', label:'折扣', hint:'2.8 折填 0.28', min:0.01, max:1, step:0.01},
+      {k:'feeMin', label:'最低手續費（元）', min:0, max:100, step:1}
+    ]}
+  ];
+  const STORE = '00953b-flow-params-v1';
+
+  const FIXED = {bbBase:'adj', moveBase:true, exec:'same', decClear:true, poolCapOn:true, addDown:'all', upAdd:0};
+  let p = Object.assign({}, DEFAULTS, FIXED);
+  try{
+    const s = localStorage.getItem(STORE);
+    if(s){ const o = JSON.parse(s); for(const k in DEFAULTS){ if(k in o && typeof o[k] === typeof DEFAULTS[k]) p[k] = o[k]; } }
+  }catch(e){}
+  function save(){ try{ localStorage.setItem(STORE, JSON.stringify(p)); }catch(e){} markDirty(); }
+
+  const $ = id => document.getElementById(id);
+  const nf = new Intl.NumberFormat('zh-TW');
+  const fmt = n => nf.format(Math.round(n));
+  const fmtPct = v => (v < 0 ? '−' : '') + String(Math.abs(+v.toFixed(2))) + '%';
+
+  /* ---------- 參數面板 ---------- */
+  const fieldsEl = $('fields');
+  GROUPS.forEach(g => {
+    const fs = document.createElement('fieldset');
+    const lg = document.createElement('legend'); lg.textContent = g.title; fs.appendChild(lg);
+    g.fields.forEach(f => {
+      const row = document.createElement('div'); row.className = 'field'; row.dataset.k = f.k;
+      const id = 'p_' + f.k;
+      const lab = document.createElement('label'); lab.htmlFor = id; lab.textContent = f.label;
+      if(f.hint){ const h = document.createElement('span'); h.className = 'hint'; h.textContent = f.hint; lab.appendChild(h); }
+      let inp;
+      if(f.type === 'bool'){ inp = document.createElement('input'); inp.type = 'checkbox'; }
+      else if(f.type === 'sel'){
+        inp = document.createElement('select');
+        f.opts.forEach(([v,t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; inp.appendChild(o); });
+      } else {
+        inp = document.createElement('input'); inp.type = 'number'; inp.min = f.min; inp.max = f.max; inp.step = f.step; inp.inputMode = 'decimal';
+      }
+      inp.id = id;
+      row.appendChild(lab); row.appendChild(inp); fs.appendChild(row);
+      const handler = () => {
+        let v;
+        if(f.type === 'bool') v = inp.checked;
+        else if(f.type === 'sel') v = inp.value;
+        else {
+          if(inp.value === '') return;
+          v = parseFloat(inp.value); if(!isFinite(v)) return;
+          if(v < f.min || v > f.max) return;
+          if(f.step >= 1) v = Math.round(v);
+        }
+        p[f.k] = v; lastChanged = f.k; save(); update();
+      };
+      inp.addEventListener(f.type === 'bool' || f.type === 'sel' ? 'change' : 'input', handler);
+      if(!f.type){
+        inp.addEventListener('change', () => {
+          let v = parseFloat(inp.value);
+          if(!isFinite(v)) v = p[f.k];
+          v = Math.min(f.max, Math.max(f.min, v));
+          if(f.step >= 1) v = Math.round(v);
+          inp.value = v; p[f.k] = v; lastChanged = f.k; save(); update();
+        });
+      }
+    });
+    fieldsEl.appendChild(fs);
+  });
+  function syncInputs(){
+    GROUPS.forEach(g => g.fields.forEach(f => {
+      const inp = $('p_' + f.k);
+      if(f.type === 'bool') inp.checked = !!p[f.k];
+      else inp.value = p[f.k];
+      const row = inp.closest('.field');
+      row.classList.toggle('changed', p[f.k] !== DEFAULTS[f.k]);
+      if(f.dep){ const off = !p[f.dep]; row.classList.toggle('disabled', off); inp.disabled = off; }
+    }));
+  }
+  let lastChanged = null;
+  $('reset').addEventListener('click', () => { p = Object.assign({}, DEFAULTS, FIXED); lastChanged = null; save(); syncInputs(); update(); });
+
+  /* ---------- 流程圖原始碼 ---------- */
+  function buildCode(q, rich){
+    const P = (k, t) => rich ? `<span class='pv' data-k='${k}'>${t}</span>` : String(t);
+    const bb = q.bbBase === 'adj' ? '還原' : '原始';
+    const ex = q.exec === 'same' ? '當日盤後定價' : '隔日開盤';
+    const addT = q.addDown === 'all' ? '全部現金池' : q.addDown + ' 張';
+    const L = ['flowchart TD'];
+    L.push(`A["每月開始<br/>新增 ${P('budget', q.budget + ' 張')}等值預算<br/>（月初收盤 × ${P('budget', fmt(q.budget*1000))} 股）<br/>已入帳配息併入現金池"]`);
+    L.push(`A --> B["每日收盤後填入<br/>收盤、MA、${bb}價 BB 下緣"]`);
+    L.push(`B --> C{"${bb}收盤 ≤<br/>BB 下緣？"}`);
+    L.push(`C -- 是 --> D{"本月基本單<br/>已經下了？"}`);
+    if(q.moveBase){
+      L.push(`D -- 否 --> E["基本單提前到觸發日<br/>${ex}<br/>本月不再加碼"]`);
+    } else {
+      L.push(`D -- 否 --> W["${P('moveBase','不提前')}<br/>照原定日下基本單"]`);
+      L.push(`W --> I`);
+    }
+    L.push(`D -- 是 --> X{"基本單之後的<br/>第一次觸發？"}`);
+    L.push(`X -- 否 --> H["忽略"]`);
+    L.push(`X -- 是 --> F{"收盤在<br/>MA 下方？"}`);
+    L.push(`F -- 是 --> G["加碼單：${addT}<br/>${ex}"]`);
+    if(q.upAdd > 0) L.push(`F -- 否 --> G2["加碼單：${P('upAdd', q.upAdd + ' 張')}<br/>${ex}"]`);
+    else L.push(`F -- 否 --> H2["不加碼<br/>本月加碼機會用掉"]`);
+    L.push(`C -- 否 --> I{"今天是除息後<br/>第 ${P('wait', q.wait)} 個交易日？<br/>無除息的月份改為月底"}`);
+    L.push(`I -- 否 --> R["當日結束"]`);
+    L.push(`I -- 是 --> J{"本月基本單<br/>已經下了？"}`);
+    L.push(`J -- 是 --> R`);
+    L.push(`J -- 否 --> E2["基本單<br/>當日盤後定價"]`);
+    let k1 = `乖離 ≥ 0：${P('up', q.up + ' 張')}`;
+    if(q.poolCapOn) k1 += `<br/>（買後現金池超過 ${P('poolCap', q.poolCap + ' 張')}金額<br/>則改買 ${P('budget', q.budget + ' 張')}）`;
+    const ks = [k1,
+      `${P('deep', fmtPct(q.deep))} ＜ 乖離 ＜ 0：${P('mid', q.mid + ' 張')}`,
+      `乖離 ≤ ${P('deep', fmtPct(q.deep))}：${P('budget', q.budget + ' 張')} ＋ 全部現金池`];
+    if(q.decClear) ks.push('12 月：預算＋現金池全部買');
+    L.push(`K["基本單張數（依除息日乖離）<br/>${ks.join('<br/>')}"]`);
+    if(q.moveBase) L.push('E --> K');
+    L.push('E2 --> K');
+    L.push(`Q["資金不足時<br/>買得起的最大張數"]`);
+    L.push('K --> Q', 'G --> Q');
+    if(q.upAdd > 0) L.push('G2 --> Q'); else L.push('H2 --> R');
+    L.push('Q --> R', 'H --> R');
+    L.push(`R --> Z{"本月最後<br/>交易日？"}`);
+    L.push('Z -- 否 --> B');
+    L.push(`Z -- 是 --> M["未用資金結轉<br/>進入下一個月"]`);
+    L.push('M --> A');
+    return L;
+  }
+  function existing(q){
+    return new Set(['A','B','C','D','X','H','F','G','I','R','J','E2','K','Q','Z','M']
+      .concat(q.moveBase ? ['E'] : ['W']).concat(q.upAdd > 0 ? ['G2'] : ['H2']));
+  }
+  function hitLines(q){
+    if(!decision || !decision.path || !decision.path.length) return [];
+    const ex = existing(q), ids = [...new Set(decision.path)].filter(x => ex.has(x));
+    if(!ids.length) return [];
+    return [`classDef hit stroke:${css('--hit')},stroke-width:5px`, `class ${ids.join(',')} hit`];
+  }
+  function css(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function styleLines(q){
+    const c = {s:css('--surface'), i:css('--ink'), m:css('--muted'), l:css('--line'), a:css('--accent'), as:css('--accent-soft'), am:css('--amber'), ams:css('--amber-soft'), g:css('--grey-soft')};
+    const base = ['E2','K'].concat(q.moveBase ? ['E'] : []);
+    const add = ['G'].concat(q.upAdd > 0 ? ['G2'] : []);
+    const skip = ['H'].concat(q.upAdd > 0 ? [] : ['H2']).concat(q.moveBase ? [] : ['W']);
+    return [
+      `classDef base fill:${c.as},stroke:${c.a},stroke-width:1.5px,color:${c.i}`,
+      `classDef add fill:${c.ams},stroke:${c.am},stroke-width:1.5px,color:${c.i}`,
+      `classDef skip fill:${c.g},stroke:${c.l},color:${c.m}`,
+      `classDef flow fill:${c.s},stroke:${c.l},color:${c.i}`,
+      `class ${base.join(',')} base`,
+      `class ${add.join(',')} add`,
+      `class ${skip.join(',')} skip`,
+      `class A,B,Q,R,M flow`
+    ].concat(hitLines(q));
+  }
+
+  /* ---------- 狀態與警示 ---------- */
+  function renderStatus(){
+    const diff = Object.keys(DEFAULTS).filter(k => !FEE_KEYS.includes(k) && p[k] !== DEFAULTS[k]);
+    const st = $('status');
+    st.innerHTML = '';
+    const b = document.createElement('div');
+    if(diff.length === 0){
+      b.className = 'badge ok';
+      b.textContent = '與回測設定相同。回測期間 2024/12～2026/09，總報酬 7.15%，買價平均比當月均價低 0.47%。';
+    } else {
+      b.className = 'badge dev';
+      b.textContent = `已調整 ${diff.length} 項（${diff.map(k => NAMES[k]).join('、')}）。這組參數沒有經過回測，效果需要另外驗證。`;
+    }
+    st.appendChild(b);
+    const w = [];
+    if(p.up > p.budget) w.push(`線上張數（${p.up}）大於每月預算（${p.budget}），線上月份會反過來消耗現金池。`);
+    if(p.up === p.budget) w.push('線上張數等於每月預算，線上月份不會少買，現金池只能靠配息累積。');
+    if(p.mid < p.budget) w.push(`小幅線下張數（${p.mid}）小於每月預算，跌破均線反而買得比較少。`);
+    if(p.mid < p.up) w.push('小幅線下張數小於線上張數，與「線下多買」的方向相反。');
+    if(p.monthCap < p.mid) w.push(`單月上限（${p.monthCap}）小於小幅線下張數（${p.mid}），小幅線下時永遠買不到設定的張數。`);
+    if(p.monthCap < p.budget) w.push(`單月上限（${p.monthCap}）小於每月預算（${p.budget}），每月都會有錢買不完。`);
+    if(p.poolCapOn && p.poolCap < p.budget - p.up) w.push(`現金池上限（${p.poolCap} 張）比線上每月存下的張數（${p.budget - p.up} 張）還少，線上月份幾乎都會改買滿 ${p.budget} 張。`);
+    if(!p.poolCapOn) w.push('現金池沒有上限。回測顯示現金池無限累積時，閒置資金少領的配息會拖累總報酬。');
+    const ul = $('warns'); ul.innerHTML = '';
+    w.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+  }
+
+  /* ---------- 繪圖 ---------- */
+  let seq = 0, mermaidReady = false;
+  async function renderChart(){
+    const code = buildCode(p, true).concat(styleLines(p)).join('\n');
+    const el = $('chart');
+    if(!window.mermaid){ el.innerHTML = '<p class="err">流程圖元件沒有載入成功，請重新整理頁面。下方的今日判斷仍可正常使用。</p>'; return; }
+    const my = ++seq;
+    try{
+      window.mermaid.initialize({
+        startOnLoad:false, securityLevel:'loose', theme:'base',
+        themeVariables:{
+          background:css('--surface'), primaryColor:css('--surface'), primaryTextColor:css('--ink'),
+          primaryBorderColor:css('--muted'), lineColor:css('--muted'), textColor:css('--ink'),
+          secondaryColor:css('--bg'), tertiaryColor:css('--bg'), edgeLabelBackground:css('--surface'),
+          fontFamily:'"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif', fontSize:'15px'
+        },
+        flowchart:{htmlLabels:true, curve:'basis', useMaxWidth:true, nodeSpacing:36, rankSpacing:44}
+      });
+      const out = await window.mermaid.render('fc' + my, code);
+      if(my !== seq) return;
+      el.innerHTML = out.svg;
+      const pth = decision && decision.path ? decision.path : [];
+      el.classList.toggle('has-path', pth.length > 0);
+      for(let k = 0; k < pth.length - 1; k++){
+        el.querySelectorAll(`.flowchart-link.LS-${pth[k]}.LE-${pth[k+1]}`).forEach(e => e.classList.add('hit-edge'));
+      }
+      if(lastChanged){
+        el.querySelectorAll(`.pv[data-k="${lastChanged}"]`).forEach(s => s.classList.add('flash'));
+      }
+    }catch(e){
+      if(my !== seq) return;
+      el.innerHTML = '<p class="err">這組參數畫不出流程圖，請檢查是否有欄位是空的。</p>';
+    }
+  }
+
+  /* ---------- 今日判斷 ---------- */
+  function fee(amount){ return amount <= 0 ? 0 : Math.max(p.feeMin, Math.floor(amount * p.feeRate / 100 * p.feeDisc)); }
+  function cost(n, unit){ return n * unit + fee(n * unit); }
+  function maxAff(cash, unit){ let n = 0; while(cost(n + 1, unit) <= cash && n < 10000) n++; return n; }
+
+  const DAY_NUM = ['d_close','d_ma','d_adj','d_bbl','d_day','d_xclose','d_xma','d_carry','d_mopen','d_div','d_spent'];
+  const DAY_CHK = ['d_hasdiv','d_last','d_dec','d_based','d_addon'];
+  const DAY_STORE = '00953b-flow-day-v1';
+  function saveDay(){
+    const o = {}; DAY_NUM.forEach(id => o[id] = $(id).value); DAY_CHK.forEach(id => o[id] = $(id).checked);
+    try{ localStorage.setItem(DAY_STORE, JSON.stringify(o)); }catch(e){}
+    markDirty();
+  }
+  function loadDay(){
+    try{
+      const s = localStorage.getItem(DAY_STORE); if(!s) return;
+      const o = JSON.parse(s);
+      DAY_NUM.forEach(id => { if(typeof o[id] === 'string') $(id).value = o[id]; });
+      DAY_CHK.forEach(id => { if(typeof o[id] === 'boolean') $(id).checked = o[id]; });
+    }catch(e){}
+  }
+  const g = id => { const s = $(id).value.trim(); return s === '' ? NaN : parseFloat(s); };
+  const ok = v => isFinite(v);
+  const px = v => String(+v.toFixed(4));
+
+  function updateDayLabels(){
+    const bb = p.bbBase === 'adj' ? '還原' : '原始';
+    $('lab_bbl').textContent = `${bb} BB 下緣`;
+    $('row_adj').hidden = p.bbBase !== 'adj';
+  }
+
+  function baseLots(cash, unit, bias, dec, bought){
+    const aff = maxAff(cash, unit), clear = dec && p.decClear;
+    let n, why;
+    if(clear){ n = aff; why = '12 月：預算＋現金池全部買進，不受單月上限。'; }
+    else if(bias >= 0){
+      n = p.up; why = `乖離 ${fmtPct(bias*100)} ≥ 0 → 線上 ${p.up} 張。`;
+      const capAmt = p.poolCap * unit;
+      if(p.poolCapOn && cash - p.up * unit > capAmt){
+        const extra = Math.max(0, Math.floor((cash - p.budget * unit - capAmt) / unit));
+        n = Math.max(p.up, p.budget + extra);
+        why += `但買 ${p.up} 張後現金池會超過上限 ${fmt(capAmt)} 元 → 改買 ${n} 張。`;
+      }
+    } else if(bias*100 > p.deep){ n = p.mid; why = `乖離 ${fmtPct(bias*100)} 介於 ${fmtPct(p.deep)} 與 0 之間 → 小幅線下 ${p.mid} 張。`; }
+    else { n = aff; why = `乖離 ${fmtPct(bias*100)} ≤ ${fmtPct(p.deep)} → ${p.budget} 張＋全部現金池。`; }
+    if(n > aff){ why += `現金扣掉手續費後只夠 ${aff} 張。`; n = aff; }
+    return {n, why};
+  }
+  function addonLots(cash, unit, below, dec, bought){
+    const aff = maxAff(cash, unit);
+    let n, why;
+    if(below){
+      n = p.addDown === 'all' ? aff : +p.addDown;
+      why = p.addDown === 'all' ? '收盤在均線下方 → 加碼動用全部現金池。' : `收盤在均線下方 → 加碼 ${p.addDown} 張。`;
+    } else { n = p.upAdd; why = `收盤在均線上方 → 加碼 ${p.upAdd} 張。`; }
+    if(n > aff){ n = aff; why += aff === 0 ? '現金不足 1 張，不買。' : `現金扣掉手續費後只夠 ${aff} 張。`; }
+    return {n, why};
+  }
+
+  function cashInfo(){
+    const z = x => ok(x) ? x : 0;
+    const carry = z(g('d_carry')), div = z(g('d_div')), spent = z(g('d_spent')), mopen = g('d_mopen');
+    const budget = ok(mopen) && mopen > 0 ? Math.round(mopen * 1000) * p.budget : NaN;
+    return {carry, div, spent, budget, cash: ok(budget) ? carry + budget + div - spent : NaN};
+  }
+  function renderCashSum(){
+    const c = cashInfo(), el = $('d_cashsum'); el.innerHTML = '';
+    const ln = (a, b, cls) => { const d = document.createElement('div'); d.className = 'ln' + (cls ? ' ' + cls : ''); const s1 = document.createElement('span'); s1.textContent = a; const s2 = document.createElement('span'); s2.textContent = b; d.append(s1, s2); el.appendChild(d); };
+    ln('上月結轉', fmt(c.carry) + ' 元');
+    ln(`本月預算（月初收盤 × ${fmt(p.budget * 1000)} 股）`, ok(c.budget) ? fmt(c.budget) + ' 元' : '填月初收盤');
+    ln('已入帳配息', '＋' + fmt(c.div) + ' 元');
+    ln('已花費', '−' + fmt(c.spent) + ' 元');
+    ln('可用現金', ok(c.cash) ? fmt(c.cash) + ' 元' : '—', 'total');
+  }
+
+  let decision = null;
+  function decide(){
+    const v = {close:g('d_close'), ma:g('d_ma'), adj:g('d_adj'), bbl:g('d_bbl'), open:NaN, day:g('d_day'),
+      xclose:g('d_xclose'), xma:g('d_xma'), cash:cashInfo().cash, bought:0};
+    const hasDiv = $('d_hasdiv').checked, isLast = $('d_last').checked, dec = $('d_dec').checked;
+    const based = $('d_based').checked, addonUsed = $('d_addon').checked;
+    const bb = p.bbBase === 'adj' ? '還原' : '原始';
+
+    $('d_bias_today').textContent = ok(v.close) && ok(v.ma) && v.ma > 0 ? `今日乖離 ${fmtPct((v.close/v.ma-1)*100)}` : '';
+    $('d_bias_ex').textContent = ok(v.xclose) && ok(v.xma) && v.xma > 0 ? `除息日乖離 ${fmtPct((v.xclose/v.xma-1)*100)}` : '';
+    renderCashSum();
+
+    const miss = [];
+    if(!ok(v.close)) miss.push('收盤價');
+    if(!ok(v.ma)) miss.push('均線（MA）');
+    if(p.bbBase === 'adj' && !ok(v.adj)) miss.push('還原收盤');
+    if(!ok(v.bbl)) miss.push(`${bb} BB 下緣`);
+    if(!ok(v.cash)) miss.push('月初收盤');
+    if(miss.length) return {miss, path:[]};
+
+    const steps = [], path = ['A','B','C'];
+    const ref = p.bbBase === 'adj' ? v.adj : v.close;
+    const trig = ref <= v.bbl;
+    const biasToday = v.close / v.ma - 1;
+    const below = v.close < v.ma;
+    const exPassed = hasDiv && ok(v.day) && v.day >= 0;
+    let action = {type:'none', n:0, price:v.close, why:''}, consume = false, setBased = false;
+
+    function exBias(){
+      if(!hasDiv) return {b:biasToday, src:'本月尚未除息，用今天的乖離'};
+      if(v.day === 0) return {b:biasToday, src:'今天是除息日，用今天的乖離'};
+      if(exPassed){
+        if(ok(v.xclose) && ok(v.xma) && v.xma > 0) return {b:v.xclose / v.xma - 1, src:'用除息日的乖離'};
+        return null;
+      }
+      return {b:biasToday, src:'還沒除息，用今天的乖離'};
+    }
+    function doBase(price, label){
+      const eb = exBias();
+      if(!eb){ return {needEx:true}; }
+      const unit = Math.round(price * 1000);
+      const r = baseLots(v.cash, unit, eb.b, dec, v.bought);
+      steps.push(`${eb.src}：${fmtPct(eb.b*100)}。`, r.why);
+      action = {type:'base', n:r.n, price, why:r.why, label};
+      setBased = true;
+      return {};
+    }
+
+    steps.push(trig ? `${bb}收盤 ${px(ref)} ≤ 下緣 ${px(v.bbl)} → 觸發。` : `${bb}收盤 ${px(ref)} > 下緣 ${px(v.bbl)} → 沒有觸發。`);
+    let goBaseDay = !trig;
+    if(trig){
+      path.push('D');
+      if(!based){
+        if(p.moveBase){
+          steps.push('本月基本單還沒下 → 提前到今天，本月不再加碼。');
+          path.push('E','K','Q','R');
+          const price = p.exec === 'next' ? (ok(v.open) ? v.open : v.close) : v.close;
+          const r = doBase(price, p.exec === 'next' ? '隔日開盤' : '當日盤後定價');
+          if(r.needEx) return {miss:['除息日收盤','除息日均線（MA）'], path, exNote:true};
+          consume = true;
+        } else {
+          steps.push('本月基本單還沒下，但設定為不提前 → 照原定日判斷。');
+          path.push('W'); goBaseDay = true;
+        }
+      } else {
+        path.push('X');
+        if(addonUsed){ steps.push('本月加碼機會已用掉 → 忽略這次觸發。'); path.push('H','R'); }
+        else {
+          path.push('F');
+          const price = p.exec === 'next' ? (ok(v.open) ? v.open : v.close) : v.close;
+          const unit = Math.round(price * 1000);
+          if(below || p.upAdd > 0){
+            const r = addonLots(v.cash, unit, below, dec, v.bought);
+            steps.push(`收盤 ${px(v.close)} ${below ? '＜' : '≥'} MA ${px(v.ma)}。`, r.why);
+            action = {type:'addon', n:r.n, price, why:r.why, label: p.exec === 'next' ? '隔日開盤' : '當日盤後定價'};
+            path.push(below ? 'G' : 'G2','Q','R');
+          } else {
+            steps.push(`收盤 ${px(v.close)} ≥ MA ${px(v.ma)} → 不加碼，本月加碼機會用掉。`);
+            path.push('H2','R');
+          }
+          consume = true;
+        }
+      }
+    }
+    if(goBaseDay){
+      path.push('I');
+      let isBaseDay, dayWhy;
+      if(!hasDiv){ isBaseDay = isLast; dayWhy = isLast ? '本月沒有除息，今天是本月最後交易日 → 基本單日。' : '本月尚未除息，還不是基本單日（整月不除息才在月底下）。'; }
+      else if(exPassed && v.day === p.wait){ isBaseDay = true; dayWhy = `今天是除息後第 ${p.wait} 個交易日 → 基本單日。`; }
+      else if(isLast){ isBaseDay = true; dayWhy = '除息後第 ' + p.wait + ' 個交易日落在下個月或還沒除息，今天是最後交易日 → 基本單日。'; }
+      else { isBaseDay = false; dayWhy = exPassed ? `今天是除息後第 ${v.day} 個交易日，不是第 ${p.wait} 日。` : (hasDiv ? '還沒除息，不是基本單日。' : ''); }
+      if(dayWhy) steps.push(dayWhy);
+      if(!isBaseDay){ path.push('R'); }
+      else {
+        path.push('J');
+        if(based){ steps.push('本月基本單已經下了。'); path.push('R'); }
+        else {
+          path.push('E2','K','Q','R');
+          const r = doBase(v.close, '當日盤後定價');
+          if(r.needEx) return {miss:['除息日收盤','除息日均線（MA）'], path, exNote:true};
+        }
+      }
+    }
+    path.push('Z');
+    if(isLast) path.push('M');
+    return {path, steps, action, consume, setBased, isLast, cash:v.cash, bought:v.bought};
+  }
+
+  function renderDecision(){
+    const out = $('d_out'); out.innerHTML = '';
+    const d = decision;
+    if(d.miss){
+      const m = document.createElement('div'); m.className = 'miss';
+      m.textContent = (d.exNote ? '今天要下基本單，但已經過了除息日，需要除息日的數據。還缺：' : '還缺：') + d.miss.join('、') + '。';
+      out.appendChild(m); $('d_apply').disabled = true; return;
+    }
+    const a = d.action, big = document.createElement('div'); big.className = 'big';
+    const unit = Math.round(a.price * 1000), amt = a.n * unit, f = fee(amt);
+    if(a.type === 'none') big.textContent = '今天不動作';
+    else if(a.n === 0) big.textContent = a.type === 'base' ? '今天是基本單日，但買不到整張' : '今天觸發加碼，但買不到整張';
+    else big.textContent = `${a.type === 'base' ? '基本單' : '加碼單'}：買 ${a.n} 張（${a.label}）`;
+    out.appendChild(big);
+    if(a.n > 0){
+      const dt = document.createElement('div');
+      dt.textContent = `價格 ${px(a.price)}，成交 ${fmt(amt)} 元，手續費 ${fmt(f)} 元，買後現金 ${fmt(d.cash - amt - f)} 元`;
+      out.appendChild(dt);
+    }
+    const ol = document.createElement('ol');
+    d.steps.forEach(t => { const li = document.createElement('li'); li.textContent = t; ol.appendChild(li); });
+    out.appendChild(ol);
+    if(d.isLast){
+      const me = document.createElement('div'); me.className = 'monthend';
+      me.textContent = '今天是本月最後交易日：收盤後未用的現金結轉到下個月，下個月第一天記得按「開始新月份」。';
+      out.appendChild(me);
+    }
+    $('d_apply').disabled = !(a.n > 0 || d.consume || d.setBased);
+  }
+
+  function syncDivUI(){
+    const has = $('d_hasdiv').checked, day = g('d_day');
+    const dayInp = $('d_day'), dayRow = dayInp.closest('.field');
+    dayInp.disabled = !has; dayRow.classList.toggle('off', !has);
+    const fs = $('d_xclose').closest('fieldset'), note = $('d_exnote');
+    const xc = $('d_xclose'), xm = $('d_xma');
+    let off = true, lock = true, txt, need = false;
+    if(!has){ txt = '還沒除息（或本月不除息）：不需要除息日數據。除息日當天勾選「本月已除息」，會自動帶入當天的收盤與均線。'; }
+    else if(!ok(day)){ txt = '請填今天是除息後第幾個交易日（除息日為 0）。'; need = true; }
+    else if(day === 0){
+      off = false; txt = '今天是除息日：已自動帶入今日收盤與均線，之後幾天會保留。';
+      let changed = false;
+      if($('d_close').value !== '' && xc.value !== $('d_close').value){ xc.value = $('d_close').value; changed = true; }
+      if($('d_ma').value !== '' && xm.value !== $('d_ma').value){ xm.value = $('d_ma').value; changed = true; }
+      if(changed) saveDay();
+    } else {
+      off = false; lock = false;
+      const filled = ok(g('d_xclose')) && ok(g('d_xma'));
+      need = !filled;
+      txt = filled ? `已過除息日（今天是第 ${day} 個交易日）：基本單用這裡的乖離。` : `已過除息日（今天是第 ${day} 個交易日）：請補填除息日的收盤與均線。`;
+    }
+    fs.classList.toggle('off', off);
+    xc.disabled = lock; xm.disabled = lock;
+    note.textContent = txt; note.classList.toggle('need', need);
+  }
+  function refreshDay(){
+    syncDivUI();
+    decision = decide();
+    renderDecision();
+  }
+  function flash(t){ const m = $('d_msg'); m.textContent = t; setTimeout(() => { if(m.textContent === t) m.textContent = ''; }, 5000); }
+
+  $('d_apply').addEventListener('click', () => {
+    const d = decision; if(!d || d.miss) return;
+    const a = d.action;
+    if(a.n > 0){
+      const unit = Math.round(a.price * 1000), amt = a.n * unit;
+      const sp = ok(g('d_spent')) ? g('d_spent') : 0;
+      $('d_spent').value = Math.round(sp + amt + fee(amt));
+    }
+    if(d.setBased) $('d_based').checked = true;
+    if(d.consume) $('d_addon').checked = true;
+    saveDay(); refreshDay(); scheduleChart();
+    flash('已更新本月帳務。');
+  });
+  $('d_newmonth').addEventListener('click', () => {
+    const c = cashInfo();
+    if(ok(c.cash)) $('d_carry').value = Math.round(c.cash);
+    ['d_day','d_xclose','d_xma','d_mopen','d_div','d_spent'].forEach(id => $(id).value = '');
+    ['d_based','d_addon','d_last','d_hasdiv','d_dec'].forEach(id => $(id).checked = false);
+    saveDay(); refreshDay(); scheduleChart();
+    flash(ok(c.cash) ? `已把可用現金 ${fmt(c.cash)} 元帶入「上月結轉」，請填新月份的月初收盤。` : '已清空本月狀態，請填上月結轉與月初收盤。');
+  });
+  $('d_clear').addEventListener('click', () => {
+    DAY_NUM.forEach(id => $(id).value = ''); DAY_CHK.forEach(id => $(id).checked = false);
+    saveDay(); refreshDay(); scheduleChart();
+    flash('已清除全部數據。');
+  });
+  $('d_day').addEventListener('input', () => { if($('d_day').value.trim() !== '') $('d_hasdiv').checked = true; });
+  $('d_hasdiv').addEventListener('change', () => {
+    if($('d_hasdiv').checked){ if($('d_day').value.trim() === '') $('d_day').value = '0'; }
+    else { ['d_day','d_xclose','d_xma'].forEach(id => $(id).value = ''); }
+  });
+  $('d_day').addEventListener('change', () => {
+    if($('d_hasdiv').checked && $('d_day').value.trim() === '') $('d_day').value = '0';
+  });
+  DAY_NUM.concat(DAY_CHK).forEach(id => {
+    $(id).addEventListener('input', () => { saveDay(); refreshDay(); lastChanged = null; scheduleChart(); });
+    $(id).addEventListener('change', () => { saveDay(); refreshDay(); lastChanged = null; scheduleChart(); });
+  });
+
+  /* ---------- 雲端同步 ---------- */
+  const TOKEN_KEY = '00953b-sync-token', META_KEY = '00953b-sync-meta';
+  const API_URL = '/api/state';
+  let meta = {version:0, dirty:false};
+  try{ const m = JSON.parse(localStorage.getItem(META_KEY) || 'null'); if(m && typeof m.version === 'number') meta = {version:m.version, dirty:!!m.dirty}; }catch(e){}
+  let syncReady = false, applying = false, pushTimer = null, busy = false;
+  function saveMeta(){ try{ localStorage.setItem(META_KEY, JSON.stringify(meta)); }catch(e){} }
+  function token(){ try{ return localStorage.getItem(TOKEN_KEY) || ''; }catch(e){ return ''; } }
+  function setStatus(t, kind){ const el = $('s_status'); el.textContent = t; el.className = 'sync-status' + (kind ? ' ' + kind : ''); }
+  function markDirty(){
+    if(applying) return;
+    meta.dirty = true; saveMeta();
+    if(syncReady && token()){ clearTimeout(pushTimer); pushTimer = setTimeout(push, 1500); setStatus('有未同步的變更…'); }
+  }
+  function snapshot(){
+    const params = {}; for(const k in DEFAULTS) params[k] = p[k];
+    const day = {}; DAY_NUM.forEach(id => day[id] = $(id).value); DAY_CHK.forEach(id => day[id] = $(id).checked);
+    return {params, day};
+  }
+  function applyRemote(st){
+    applying = true;
+    try{
+      if(st.params){
+        p = Object.assign({}, DEFAULTS, FIXED);
+        for(const k in DEFAULTS){ if(k in st.params && typeof st.params[k] === typeof DEFAULTS[k]) p[k] = st.params[k]; }
+        try{ localStorage.setItem(STORE, JSON.stringify(p)); }catch(e){}
+      }
+      if(st.day){
+        DAY_NUM.forEach(id => { $(id).value = typeof st.day[id] === 'string' ? st.day[id] : ''; });
+        DAY_CHK.forEach(id => { $(id).checked = st.day[id] === true; });
+        try{ localStorage.setItem(DAY_STORE, JSON.stringify(st.day)); }catch(e){}
+      }
+      lastChanged = null; update();
+    } finally { applying = false; }
+  }
+  const timeStr = () => new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'});
+  async function api(method, body){
+    const r = await fetch(API_URL, {method, cache:'no-store',
+      headers:{'Authorization':'Bearer ' + token(), 'Content-Type':'application/json'},
+      body: body ? JSON.stringify(body) : undefined});
+    let data = null; try{ data = await r.json(); }catch(e){}
+    return {status:r.status, data};
+  }
+  function failMsg(s){
+    if(s === 401) return '同步金鑰不正確。';
+    if(s === 404 || s === 405) return '這個網址沒有同步服務（只在你部署的 Cloudflare Worker 網址上有效）。';
+    if(s === 500) return '同步服務還沒設定完成（請確認 KV 綁定 STATE 與 Secret SYNC_TOKEN）。';
+    return '同步失敗（狀態 ' + s + '）。';
+  }
+  async function push(){
+    if(!token() || busy) return;
+    busy = true; let retry = false;
+    try{
+      const r = await api('PUT', Object.assign({baseVersion: meta.version}, snapshot()));
+      if(r.status === 200 && r.data){ meta.version = r.data.version; meta.dirty = false; saveMeta(); setStatus('已同步 ' + timeStr(), 'ok'); }
+      else if(r.status === 409 && r.data && r.data.state){
+        applyRemote(r.data.state); meta.version = r.data.state.version; meta.dirty = false; saveMeta();
+        setStatus('另一台裝置先更新過，已改用雲端上的最新數據，剛才的修改請再確認一次。', 'warn');
+      }
+      else if(r.status === 409){ meta.version = 0; saveMeta(); retry = true; }
+      else setStatus(failMsg(r.status), 'warn');
+    }catch(e){ setStatus('無法連線到同步服務。', 'warn'); }
+    finally{ busy = false; }
+    if(retry) await push();
+  }
+  async function pull(){
+    if(!token() || busy) return;
+    busy = true; let doPush = false;
+    try{
+      setStatus('同步中…');
+      const r = await api('GET');
+      if(r.status !== 200){ setStatus(failMsg(r.status), 'warn'); return; }
+      const st = r.data;
+      if(!st){ doPush = true; }
+      else if(st.version > meta.version){
+        const hadLocal = meta.dirty;
+        applyRemote(st); meta.version = st.version; meta.dirty = false; saveMeta();
+        setStatus(hadLocal ? '雲端有較新的數據，已載入；這台裝置未同步的修改已被取代。' : '已載入雲端最新數據 ' + timeStr(), hadLocal ? 'warn' : 'ok');
+      }
+      else if(meta.dirty){ doPush = true; }
+      else setStatus('已同步 ' + timeStr(), 'ok');
+    }catch(e){ setStatus('無法連線到同步服務（只在你部署的 Cloudflare Worker 網址上有效）。', 'warn'); }
+    finally{ busy = false; }
+    if(doPush) await push();
+  }
+  function syncInit(){
+    $('s_token').value = token();
+    $('s_save').addEventListener('click', () => {
+      const t = $('s_token').value.trim();
+      try{ if(t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); }catch(e){}
+      if(!t){ setStatus('已移除同步金鑰，數據只存在這台裝置。'); return; }
+      meta = {version:0, dirty:false}; saveMeta();
+      pull();
+    });
+    $('s_now').addEventListener('click', () => {
+      if(!token()){ setStatus('請先填入同步金鑰。', 'warn'); return; }
+      clearTimeout(pushTimer);
+      if(meta.dirty) push(); else pull();
+    });
+    document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') pull(); });
+    syncReady = true;
+    if(token()) pull(); else setStatus('尚未設定同步金鑰，數據只存在這台裝置。');
+  }
+
+  /* ---------- 更新 ---------- */
+  let timer = null;
+  function scheduleChart(){ clearTimeout(timer); timer = setTimeout(renderChart, 180); }
+  function update(){
+    syncInputs(); updateDayLabels(); refreshDay();
+    scheduleChart();
+  }
+  const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  if(mq && mq.addEventListener) mq.addEventListener('change', () => { lastChanged = null; renderChart(); });
+  new MutationObserver(() => { lastChanged = null; renderChart(); }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+
+  loadDay(); syncInputs(); updateDayLabels(); refreshDay();
+  syncInit();
+  const go = () => renderChart();
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(go, go); } else { go(); }
+})();
+</script>
+</body>
+</html>
