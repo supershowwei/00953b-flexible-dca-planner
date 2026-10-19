@@ -197,7 +197,6 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
             <legend>今日行情</legend>
             <div class="field"><label for="d_close">收盤價</label><input type="number" id="d_close" step="0.01" min="0" inputmode="decimal" placeholder="例 9.58"></div>
             <div class="field"><label for="d_ma" id="lab_ma">均線（MA）</label><input type="number" id="d_ma" step="0.0001" min="0" inputmode="decimal"></div>
-            <div class="field" id="row_adj"><label for="d_adj">還原收盤<span class="hint">券商「還原權值」K 線的收盤</span></label><input type="number" id="d_adj" step="0.0001" min="0" inputmode="decimal"></div>
             <div class="field"><label for="d_bbl" id="lab_bbl">還原 BB 下緣</label><input type="number" id="d_bbl" step="0.0001" min="0" inputmode="decimal"></div>
             <div class="calc-line" id="d_bias_today"></div>
           </fieldset>
@@ -358,7 +357,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     const L = ['flowchart TD'];
     L.push(`A["每月開始<br/>新增 ${P('budget', q.budget + ' 張')}等值預算<br/>（月初收盤 × ${P('budget', fmt(q.budget*1000))} 股）<br/>已入帳配息併入現金池"]`);
     L.push(`A --> B["每日收盤後填入<br/>收盤、MA、${bb}價 BB 下緣"]`);
-    L.push(`B --> C{"${bb}收盤 ≤<br/>BB 下緣？"}`);
+    L.push(`B --> C{"收盤 ≤<br/>${bb} BB 下緣？"}`);
     L.push(`C -- 是 --> D{"本月基本單<br/>已經下了？"}`);
     if(q.moveBase){
       L.push(`D -- 否 --> E["基本單提前到觸發日<br/>${ex}<br/>本月不再加碼"]`);
@@ -491,7 +490,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
   function cost(n, unit){ return n * unit + fee(n * unit); }
   function maxAff(cash, unit){ let n = 0; while(cost(n + 1, unit) <= cash && n < 10000) n++; return n; }
 
-  const DAY_NUM = ['d_close','d_ma','d_adj','d_bbl','d_day','d_xclose','d_xma','d_carry','d_mopen','d_div','d_spent'];
+  const DAY_NUM = ['d_close','d_ma','d_bbl','d_day','d_xclose','d_xma','d_carry','d_mopen','d_div','d_spent'];
   const DAY_CHK = ['d_hasdiv','d_last','d_dec','d_based','d_addon'];
   const DAY_STORE = '00953b-flow-day-v1';
   function saveDay(){
@@ -514,7 +513,6 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
   function updateDayLabels(){
     const bb = p.bbBase === 'adj' ? '還原' : '原始';
     $('lab_bbl').textContent = `${bb} BB 下緣`;
-    $('row_adj').hidden = p.bbBase !== 'adj';
   }
 
   function baseLots(cash, unit, bias, dec, bought){
@@ -563,7 +561,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
 
   let decision = null;
   function decide(){
-    const v = {close:g('d_close'), ma:g('d_ma'), adj:g('d_adj'), bbl:g('d_bbl'), open:NaN, day:g('d_day'),
+    const v = {close:g('d_close'), ma:g('d_ma'), bbl:g('d_bbl'), open:NaN, day:g('d_day'),
       xclose:g('d_xclose'), xma:g('d_xma'), cash:cashInfo().cash, bought:0};
     const hasDiv = $('d_hasdiv').checked, isLast = $('d_last').checked, dec = $('d_dec').checked;
     const based = $('d_based').checked, addonUsed = $('d_addon').checked;
@@ -576,14 +574,12 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
     const miss = [];
     if(!ok(v.close)) miss.push('收盤價');
     if(!ok(v.ma)) miss.push('均線（MA）');
-    if(p.bbBase === 'adj' && !ok(v.adj)) miss.push('還原收盤');
     if(!ok(v.bbl)) miss.push(`${bb} BB 下緣`);
     if(!ok(v.cash)) miss.push('月初收盤');
     if(miss.length) return {miss, path:[]};
 
     const steps = [], path = ['A','B','C'];
-    const ref = p.bbBase === 'adj' ? v.adj : v.close;
-    const trig = ref <= v.bbl;
+    const trig = v.close <= v.bbl;
     const biasToday = v.close / v.ma - 1;
     const below = v.close < v.ma;
     const exPassed = hasDiv && ok(v.day) && v.day >= 0;
@@ -609,7 +605,7 @@ pre.code{margin:0;background:var(--bg);border-radius:10px;padding:12px;font-size
       return {};
     }
 
-    steps.push(trig ? `${bb}收盤 ${px(ref)} ≤ 下緣 ${px(v.bbl)} → 觸發。` : `${bb}收盤 ${px(ref)} > 下緣 ${px(v.bbl)} → 沒有觸發。`);
+    steps.push(trig ? `收盤 ${px(v.close)} ≤ ${bb} BB 下緣 ${px(v.bbl)} → 觸發。` : `收盤 ${px(v.close)} > ${bb} BB 下緣 ${px(v.bbl)} → 沒有觸發。`);
     let goBaseDay = !trig;
     if(trig){
       path.push('D');
