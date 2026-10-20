@@ -773,7 +773,6 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   const MARKET_URL = '/api/market';
   let mktBusy = false;
   function mktStatus(t, warn){ const el = $('m_status'); el.textContent = t; el.classList.toggle('warn', !!warn); }
-  function taipeiToday(){ return new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Taipei'}).format(new Date()); }
   async function loadMarket(){
     if(mktBusy) return;
     mktBusy = true; $('m_reload').disabled = true;
@@ -787,10 +786,8 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
       $('d_close').value = m.close; $('d_ma5').value = m.ma5; $('d_ma').value = m.ma60;
       $('d_bbl').value = m.bbLower; $('d_mopen').value = m.monthOpenClose;
       $('d_mopen_hint').textContent = `${m.monthOpenDate} 的收盤，用來算本月預算`;
-      const warns = [];
-      if(m.date !== taipeiToday()) warns.push('不是今天的數據');
-      if(m.retroDate !== m.date) warns.push(`還原日K只到 ${m.retroDate}`);
-      mktStatus(`行情日期 ${m.date}` + (warns.length ? `（${warns.join('，')}）` : ''), warns.length > 0);
+      const lag = m.retroDate !== m.date;
+      mktStatus(`行情日期 ${m.date}` + (lag ? `（還原日K只到 ${m.retroDate}）` : ''), lag);
       refreshDay(); scheduleChart();
     }catch(e){ mktStatus('無法連線到行情服務。', true); }
     finally{ mktBusy = false; $('m_reload').disabled = false; }
