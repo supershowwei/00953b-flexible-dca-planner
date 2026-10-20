@@ -162,7 +162,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 <div class="wrap">
   <header>
     <h1>00953B 不定期不定額：參數流程圖</h1>
-    <p>每天收盤後打開「今日判斷」，行情會自動帶入，再補上日曆與帳務，就能照流程圖得出今天該買幾張。左側是影響張數計算的規則數字，參數和數據都只存在這台裝置的瀏覽器裡。</p>
+    <p>每天 13:25 試撮開始後打開「今日判斷」，行情會自動帶入，再補上日曆與帳務，就能照流程圖得出今天該買幾張，收盤前高掛幾檔買進。左側是影響張數計算的規則數字，參數和數據都只存在這台裝置的瀏覽器裡。</p>
   </header>
 
   <div class="layout">
@@ -196,7 +196,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 
       <section class="card" aria-label="今日判斷">
         <h2>今日判斷</h2>
-        <p class="sub">收盤價、MA5、MA60、還原 BB 下緣與月初收盤會自動從日K數據取得；填入本月除息日後，除息日數據也會自動帶入。其餘欄位每天收盤後自己填。頁面會照流程圖走一遍，並用粗框標出這次走過的路徑。</p>
+        <p class="sub">收盤價、MA5、MA60、還原 BB 下緣與月初收盤會自動從日K數據取得；填入本月除息日後，除息日數據也會自動帶入。其餘欄位每天下單前自己填。試撮期間的收盤價是 13:25 前最後一筆成交價，實際成交以收盤價為準。頁面會照流程圖走一遍，並用粗框標出這次走過的路徑。</p>
         <div class="inputs">
           <fieldset class="grp">
             <legend>今日行情</legend>
@@ -359,11 +359,11 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   function buildCode(q, rich){
     const P = (k, t) => rich ? `<span class='pv' data-k='${k}'>${t}</span>` : String(t);
     const bb = q.bbBase === 'adj' ? '還原' : '原始';
-    const ex = q.exec === 'same' ? '當日盤後定價' : '隔日開盤';
+    const ex = q.exec === 'same' ? '尾盤高掛買進' : '隔日開盤';
     const addT = q.addDown === 'all' ? '全部現金池' : q.addDown + ' 張';
     const L = ['flowchart TD'];
     L.push(`A["每月開始<br/>新增 ${P('budget', q.budget + ' 張')}等值預算<br/>（月初收盤 × ${P('budget', fmt(q.budget*1000))} 股）<br/>已入帳配息併入現金池"]`);
-    L.push(`A --> B["每日收盤後取得<br/>收盤、MA5、MA60<br/>${bb}價 BB 下緣"]`);
+    L.push(`A --> B["每日尾盤取得<br/>收盤、MA5、MA60<br/>${bb}價 BB 下緣"]`);
     L.push(`B --> C{"收盤 ≤<br/>${bb} BB 下緣？"}`);
     L.push(`C -- 是 --> D{"本月基本單<br/>已經下了？"}`);
     if(q.moveBase){
@@ -382,7 +382,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     L.push(`I -- 否 --> R["當日結束"]`);
     L.push(`I -- 是 --> J{"本月基本單<br/>已經下了？"}`);
     L.push(`J -- 是 --> R`);
-    L.push(`J -- 否 --> E2["基本單<br/>當日盤後定價"]`);
+    L.push(`J -- 否 --> E2["基本單<br/>尾盤高掛買進"]`);
     let k1 = `乖離 ≥ 0：${P('up', q.up + ' 張')}`;
     if(q.poolCapOn) k1 += `<br/>（買後現金池超過 ${P('poolCap', q.poolCap + ' 張')}金額<br/>則改買 ${P('budget', q.budget + ' 張')}）`;
     const ks = [k1,
@@ -626,7 +626,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
           steps.push('本月基本單還沒下 → 提前到今天，本月不再加碼。');
           path.push('E','K','Q','R');
           const price = p.exec === 'next' ? (ok(v.open) ? v.open : v.close) : v.close;
-          const r = doBase(price, p.exec === 'next' ? '隔日開盤' : '當日盤後定價');
+          const r = doBase(price, p.exec === 'next' ? '隔日開盤' : '尾盤高掛買進');
           if(r.needEx) return {miss:['除息日收盤','除息日 MA60'], path, exNote:true};
           consume = true;
         } else {
@@ -643,7 +643,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
           if(below || p.upAdd > 0){
             const r = addonLots(v.cash, unit, below, dec, v.bought);
             steps.push(`收盤 ${px(v.close)} ${below ? '＜' : '≥'} MA5 ${px(v.ma5)}。`, r.why);
-            action = {type:'addon', n:r.n, price, why:r.why, label: p.exec === 'next' ? '隔日開盤' : '當日盤後定價'};
+            action = {type:'addon', n:r.n, price, why:r.why, label: p.exec === 'next' ? '隔日開盤' : '尾盤高掛買進'};
             path.push(below ? 'G' : 'G2','Q','R');
           } else {
             steps.push(`收盤 ${px(v.close)} ≥ MA5 ${px(v.ma5)} → 不加碼，本月加碼機會用掉。`);
@@ -667,7 +667,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
         if(based){ steps.push('本月基本單已經下了。'); path.push('R'); }
         else {
           path.push('E2','K','Q','R');
-          const r = doBase(v.close, '當日盤後定價');
+          const r = doBase(v.close, '尾盤高掛買進');
           if(r.needEx) return {miss:['除息日收盤','除息日 MA60'], path, exNote:true};
         }
       }
