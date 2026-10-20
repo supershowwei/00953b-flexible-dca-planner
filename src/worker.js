@@ -5,9 +5,13 @@
 //
 // 需要的設定：
 //   - KV 綁定 STATE：寫在 wrangler.jsonc
-//   - Secret SYNC_TOKEN：在 Cloudflare 後台 Worker → Settings → Variables and Secrets 設定
+//
+// 任何 20 字元以上的金鑰都能同步，每把金鑰各存一組數據（KV key 是金鑰的 SHA-256）。
+// 舊版只有一組數據存在 'state'；若還留著 Secret SYNC_TOKEN，用那把金鑰同步時會沿用舊數據。
 
-const KEY = 'state';
+const LEGACY_KEY = 'state';
+const MIN_TOKEN = 20;
+const MAX_TOKEN = 200;
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
@@ -25,18 +29,24 @@ async function sameToken(a, b) {
   return crypto.subtle.timingSafeEqual(ha, hb);
 }
 
+async function stateKey(token) {
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+  return 'state:' + [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 async function handleState(request, env) {
-  const missing = [];
-  if (!env.STATE) missing.push('STATE');
-  if (!env.SYNC_TOKEN) missing.push('SYNC_TOKEN');
-  if (missing.length) return json({ error: 'not configured', missing }, 500);
+  if (!env.STATE) return json({ error: 'not configured', missing: ['STATE'] }, 500);
 
   const auth = request.headers.get('Authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-  if (!token || !(await sameToken(token, env.SYNC_TOKEN))) return json({ error: 'unauthorized' }, 401);
+  if (token.length < MIN_TOKEN || token.length > MAX_TOKEN) return json({ error: 'bad token', min: MIN_TOKEN, max: MAX_TOKEN }, 401);
+
+  const key = await stateKey(token);
+  const legacy = env.SYNC_TOKEN ? await sameToken(token, env.SYNC_TOKEN) : false;
+  const load = async () => (await env.STATE.get(key, 'json')) || (legacy ? await env.STATE.get(LEGACY_KEY, 'json') : null);
 
   if (request.method === 'GET') {
-    return json(await env.STATE.get(KEY, 'json'));
+    return json(await load());
   }
 
   if (request.method === 'PUT') {
@@ -49,12 +59,12 @@ async function handleState(request, env) {
         || !body.day || typeof body.day !== 'object') {
       return json({ error: 'bad data' }, 400);
     }
-    const cur = await env.STATE.get(KEY, 'json');
+    const cur = await load();
     const curVersion = cur ? cur.version : 0;
     // 版本不符代表另一台裝置先存過：不覆蓋，把雲端上的最新數據回傳
     if (body.baseVersion !== curVersion) return json({ conflict: true, state: cur }, 409);
     const next = { version: curVersion + 1, savedAt: new Date().toISOString(), params: body.params, day: body.day };
-    await env.STATE.put(KEY, JSON.stringify(next));
+    await env.STATE.put(key, JSON.stringify(next));
     return json({ version: next.version, savedAt: next.savedAt });
   }
 

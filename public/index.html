@@ -798,6 +798,8 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   /* ---------- 雲端同步 ---------- */
   const TOKEN_KEY = '00953b-sync-token', META_KEY = '00953b-sync-meta';
   const API_URL = '/api/state';
+  // 每把金鑰各存一組數據；長度限制與 src/worker.js 相同
+  const TOKEN_MIN = 20, TOKEN_MAX = 200;
   let meta = {version:0, dirty:false};
   try{ const m = JSON.parse(localStorage.getItem(META_KEY) || 'null'); if(m && typeof m.version === 'number') meta = {version:m.version, dirty:!!m.dirty}; }catch(e){}
   let syncReady = false, applying = false, pushTimer = null, busy = false;
@@ -839,23 +841,22 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     return {status:r.status, data};
   }
   function failMsg(s, d){
-    if(s === 401) return '同步金鑰不正確。';
+    if(s === 401) return `同步金鑰需要 ${TOKEN_MIN}～${TOKEN_MAX} 個字元。`;
     if(s === 404 || s === 405) return '這個網址沒有同步服務（只在你部署的 Cloudflare Worker 網址上有效）。';
     if(s === 500){
       const miss = d && Array.isArray(d.missing) ? d.missing : [];
       const parts = [];
       if(miss.includes('STATE')) parts.push('KV 綁定 STATE（確認 wrangler.jsonc 的 kv_namespaces）');
-      if(miss.includes('SYNC_TOKEN')) parts.push('Secret SYNC_TOKEN（Worker → Settings → Variables and Secrets，不是 Build 裡的那個）');
-      return parts.length ? '同步服務缺少設定：' + parts.join('、') + '。' : '同步服務還沒設定完成（請確認 KV 綁定 STATE 與 Secret SYNC_TOKEN）。';
+      return parts.length ? '同步服務缺少設定：' + parts.join('、') + '。' : '同步服務還沒設定完成（請確認 KV 綁定 STATE）。';
     }
     return '同步失敗（狀態 ' + s + '）。';
   }
-  async function push(){
+  async function push(okMsg){
     if(!token() || busy) return;
     busy = true; let retry = false;
     try{
       const r = await api('PUT', Object.assign({baseVersion: meta.version}, snapshot()));
-      if(r.status === 200 && r.data){ meta.version = r.data.version; meta.dirty = false; saveMeta(); setStatus('已同步 ' + timeStr(), 'ok'); }
+      if(r.status === 200 && r.data){ meta.version = r.data.version; meta.dirty = false; saveMeta(); setStatus(okMsg || '已同步 ' + timeStr(), 'ok'); }
       else if(r.status === 409 && r.data && r.data.state){
         applyRemote(r.data.state); meta.version = r.data.state.version; meta.dirty = false; saveMeta();
         setStatus('另一台裝置先更新過，已改用雲端上的最新數據，剛才的修改請再確認一次。', 'warn');
@@ -864,17 +865,17 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
       else setStatus(failMsg(r.status, r.data), 'warn');
     }catch(e){ setStatus('無法連線到同步服務。', 'warn'); }
     finally{ busy = false; }
-    if(retry) await push();
+    if(retry) await push(okMsg);
   }
   async function pull(){
     if(!token() || busy) return;
-    busy = true; let doPush = false;
+    busy = true; let doPush = false, okMsg;
     try{
       setStatus('同步中…');
       const r = await api('GET');
       if(r.status !== 200){ setStatus(failMsg(r.status, r.data), 'warn'); return; }
       const st = r.data;
-      if(!st){ doPush = true; }
+      if(!st){ doPush = true; okMsg = '這把金鑰還沒有數據，已用這台裝置目前的數據建立 ' + timeStr(); }
       else if(st.version > meta.version){
         const hadLocal = meta.dirty;
         applyRemote(st); meta.version = st.version; meta.dirty = false; saveMeta();
@@ -884,12 +885,13 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
       else setStatus('已同步 ' + timeStr(), 'ok');
     }catch(e){ setStatus('無法連線到同步服務（只在你部署的 Cloudflare Worker 網址上有效）。', 'warn'); }
     finally{ busy = false; }
-    if(doPush) await push();
+    if(doPush) await push(okMsg);
   }
   function syncInit(){
     $('s_token').value = token();
     $('s_save').addEventListener('click', () => {
       const t = $('s_token').value.trim();
+      if(t && (t.length < TOKEN_MIN || t.length > TOKEN_MAX)){ setStatus(`同步金鑰需要 ${TOKEN_MIN}～${TOKEN_MAX} 個字元，目前 ${t.length} 個。`, 'warn'); return; }
       try{ if(t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); }catch(e){}
       if(!t){ setStatus('已移除同步金鑰，數據只存在這台裝置。'); return; }
       meta = {version:0, dirty:false}; saveMeta();

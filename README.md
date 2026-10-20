@@ -21,14 +21,19 @@
    建好後複製它的 **ID**，貼到 `wrangler.jsonc` 的 `"id"` 欄位，commit 並 push。
 2. **匯入 GitHub**：Workers & Pages → Create → Import a repository → 選這個 repository。
    Worker 名稱要填 `wrangler.jsonc` 裡的 `name`（預設 `00953b`），其餘用預設值即可，部署指令是 `npx wrangler deploy`。
-3. **設定同步金鑰**：部署完成後，到這個 Worker → Settings → Variables and Secrets → Add，
-   類型選 **Secret**，名稱 `SYNC_TOKEN`，值填一串 20 字元以上的隨機字串。
-4. **開始使用**：打開 Worker 的網址，在左邊「雲端同步」填入同一把金鑰，按「儲存金鑰並同步」。
+3. **開始使用**：打開 Worker 的網址，在左邊「雲端同步」自己取一把 20 字元以上的金鑰，按「儲存金鑰並同步」。
    其他裝置打開同一個網址、填同一把金鑰即可。
+
+## 同步金鑰
+
+- 每把金鑰各存一組數據，不用到後台設定。換成一把新金鑰時，會用這台裝置目前的數據建立新的一組。
+- 金鑰就是讀寫那組數據的唯一憑證，請用不好猜的隨機字串，不要給別人。
+- 任何知道網址的人都能用自己的金鑰寫入這個 KV。
+- 舊版只有一組數據；如果後台還留著 Secret `SYNC_TOKEN`，用那把金鑰同步會沿用舊版數據。
 
 ## 之後更新網頁
 
-直接修改 `public/index.html` 後 push，Cloudflare 會自動重新部署。KV 裡的數據和 `SYNC_TOKEN` 都不受影響。
+直接修改 `public/index.html` 後 push，Cloudflare 會自動重新部署。KV 裡的數據不受影響。
 
 ## 注意
 
