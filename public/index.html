@@ -711,26 +711,34 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   function exInfo(){
     const none = {hasDiv:false, day:NaN, xclose:NaN, xma:NaN};
     const exd = $('d_exdate').value;
-    if(!exd) return Object.assign(none, {note:'本月不除息：不需要除息日數據，基本單在月底下。'});
+    if(!exd) return Object.assign(none, exCleared ? {note:exCleared, need:true} : {note:'本月不除息：不需要除息日數據，基本單在月底下。'});
     if(!market) return Object.assign(none, {note:'行情載入後會帶入除息日數據。'});
     if(exd > market.date) return Object.assign(none, {note:`除息日 ${exd} 還沒到：不需要除息日數據。`, dayTxt:'還沒除息'});
     const rows = market.recent, i = rows.findIndex(x => x.date === exd);
-    if(i < 0){
-      const err = exd < rows[0].date ? `除息日 ${exd} 太早，超出行情範圍（${rows[0].date} 起）。` : `${exd} 不是交易日，請確認除息日。`;
-      return Object.assign(none, {err, note:err});
-    }
+    if(i < 0){ const err = `${exd} 不是交易日，請確認除息日。`; return Object.assign(none, {err, note:err}); }
     const day = rows.length - 1 - i;
     return {hasDiv:true, day, xclose:rows[i].close, xma:rows[i].ma60,
       note: day === 0 ? '今天是除息日：基本單用今天的乖離。' : '已過除息日：基本單用除息日的乖離。',
       dayTxt: `今天是除息後第 ${day} 個交易日`};
   }
+  // 除息日與最新行情不同月份時清空，讓使用者重新輸入本月除息日
+  let exCleared = '';
+  function clearStaleExDate(){
+    const exd = $('d_exdate').value;
+    if(!exd){ return; }
+    if(market && exd.slice(0, 7) !== market.date.slice(0, 7)){
+      exCleared = `除息日 ${exd} 與最新行情的月份（${market.date.slice(0, 7)}）不同，已清空。請重新輸入本月除息日，本月不除息就留空。`;
+      $('d_exdate').value = ''; saveDay();
+    } else exCleared = '';
+  }
   function syncDivUI(){
+    clearStaleExDate();
     const ex = exInfo(), note = $('d_exnote');
     $('d_xclose').value = ok(ex.xclose) ? ex.xclose : '';
     $('d_xma').value = ok(ex.xma) ? ex.xma : '';
     $('d_xclose').closest('fieldset').classList.toggle('off', !ex.hasDiv);
     $('d_exday').textContent = ex.dayTxt || '';
-    note.textContent = ex.note; note.classList.toggle('need', !!ex.err);
+    note.textContent = ex.note; note.classList.toggle('need', !!(ex.err || ex.need));
   }
   function refreshDay(){
     syncDivUI();
