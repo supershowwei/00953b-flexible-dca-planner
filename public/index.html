@@ -69,7 +69,7 @@ legend{font-weight:700;font-size:.92rem;padding:0 6px 0 0;color:var(--accent)}
 .field.changed label{font-weight:700}
 .field.changed label::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--amber);margin-left:6px;vertical-align:middle}
 .field.disabled{opacity:.45}
-input[type=number],input[type=password],select{
+input[type=number],input[type=password],input[type=date],select{
   width:100%; font:inherit; color:var(--ink); background:var(--bg);
   border:1px solid var(--line); border-radius:8px; padding:5px 8px; text-align:right;
 }
@@ -196,7 +196,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 
       <section class="card" aria-label="今日判斷">
         <h2>今日判斷</h2>
-        <p class="sub">收盤價、MA5、MA60、還原 BB 下緣與月初收盤會自動從日K數據取得，其餘欄位每天收盤後自己填。頁面會照流程圖走一遍，並用粗框標出這次走過的路徑。</p>
+        <p class="sub">收盤價、MA5、MA60、還原 BB 下緣與月初收盤會自動從日K數據取得；填入本月除息日後，除息日數據也會自動帶入。其餘欄位每天收盤後自己填。頁面會照流程圖走一遍，並用粗框標出這次走過的路徑。</p>
         <div class="inputs">
           <fieldset class="grp">
             <legend>今日行情</legend>
@@ -209,16 +209,16 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
           </fieldset>
           <fieldset class="grp">
             <legend>日曆</legend>
-            <div class="field"><label for="d_hasdiv">本月已除息<span class="hint">除息日當天勾選，之前不用勾</span></label><input type="checkbox" id="d_hasdiv"></div>
-            <div class="field"><label for="d_day">今天是除息後第幾個交易日<span class="hint">除息日為 0，之後每個交易日加 1</span></label><input type="number" id="d_day" step="1" min="0" inputmode="numeric"></div>
+            <div class="field"><label for="d_exdate">本月除息日<span class="hint">本月不除息就留空</span></label><input type="date" id="d_exdate"></div>
+            <div class="calc-line" id="d_exday"></div>
             <div class="field"><label for="d_last">今天是本月最後交易日</label><input type="checkbox" id="d_last"></div>
             <div class="field"><label for="d_dec">本月是 12 月</label><input type="checkbox" id="d_dec"></div>
           </fieldset>
           <fieldset class="grp">
             <legend>除息日數據</legend>
             <p class="hint-p ex-note" id="d_exnote"></p>
-            <div class="field"><label for="d_xclose">除息日收盤</label><input type="number" id="d_xclose" step="0.01" min="0" inputmode="decimal"></div>
-            <div class="field"><label for="d_xma" id="lab_xma">除息日 MA60</label><input type="number" id="d_xma" step="0.0001" min="0" inputmode="decimal"></div>
+            <div class="field"><label for="d_xclose">除息日收盤</label><input type="number" id="d_xclose" readonly tabindex="-1"></div>
+            <div class="field"><label for="d_xma" id="lab_xma">除息日 MA60</label><input type="number" id="d_xma" readonly tabindex="-1"></div>
             <div class="calc-line" id="d_bias_ex"></div>
           </fieldset>
           <fieldset class="grp">
@@ -498,8 +498,9 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   function maxAff(cash, unit){ let n = 0; while(cost(n + 1, unit) <= cash && n < 10000) n++; return n; }
 
   // 收盤價、MA5、MA60、BB 下緣、月初收盤由 /api/market 帶入，不存也不同步
-  const DAY_NUM = ['d_day','d_xclose','d_xma','d_carry','d_div','d_spent'];
-  const DAY_CHK = ['d_hasdiv','d_last','d_dec','d_based','d_addon'];
+  // 除息日收盤、MA60 與除息後第幾個交易日由除息日對照行情算出，也不存
+  const DAY_NUM = ['d_exdate','d_carry','d_div','d_spent'];
+  const DAY_CHK = ['d_last','d_dec','d_based','d_addon'];
   const DAY_STORE = '00953b-flow-day-v1';
   function saveDay(){
     const o = {}; DAY_NUM.forEach(id => o[id] = $(id).value); DAY_CHK.forEach(id => o[id] = $(id).checked);
@@ -569,9 +570,10 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 
   let decision = null;
   function decide(){
-    const v = {close:g('d_close'), ma5:g('d_ma5'), ma:g('d_ma'), bbl:g('d_bbl'), open:NaN, day:g('d_day'),
-      xclose:g('d_xclose'), xma:g('d_xma'), cash:cashInfo().cash, bought:0};
-    const hasDiv = $('d_hasdiv').checked, isLast = $('d_last').checked, dec = $('d_dec').checked;
+    const ex = exInfo();
+    const v = {close:g('d_close'), ma5:g('d_ma5'), ma:g('d_ma'), bbl:g('d_bbl'), open:NaN, day:ex.day,
+      xclose:ex.xclose, xma:ex.xma, cash:cashInfo().cash, bought:0};
+    const hasDiv = ex.hasDiv, isLast = $('d_last').checked, dec = $('d_dec').checked;
     const based = $('d_based').checked, addonUsed = $('d_addon').checked;
     const bb = p.bbBase === 'adj' ? '還原' : '原始';
 
@@ -585,6 +587,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     if(!ok(v.ma)) miss.push('MA60');
     if(!ok(v.bbl)) miss.push(`${bb} BB 下緣`);
     if(!ok(v.cash)) miss.push('月初收盤');
+    if(ex.err) miss.push('正確的本月除息日');
     if(miss.length) return {miss, path:[]};
 
     const steps = [], path = ['A','B','C'];
@@ -704,30 +707,30 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     $('d_apply').disabled = !(a.n > 0 || d.consume || d.setBased);
   }
 
-  function syncDivUI(){
-    const has = $('d_hasdiv').checked, day = g('d_day');
-    const dayInp = $('d_day'), dayRow = dayInp.closest('.field');
-    dayInp.disabled = !has; dayRow.classList.toggle('off', !has);
-    const fs = $('d_xclose').closest('fieldset'), note = $('d_exnote');
-    const xc = $('d_xclose'), xm = $('d_xma');
-    let off = true, lock = true, txt, need = false;
-    if(!has){ txt = '還沒除息（或本月不除息）：不需要除息日數據。除息日當天勾選「本月已除息」，會自動帶入當天的收盤與 MA60。'; }
-    else if(!ok(day)){ txt = '請填今天是除息後第幾個交易日（除息日為 0）。'; need = true; }
-    else if(day === 0){
-      off = false; txt = '今天是除息日：已自動帶入今日收盤與 MA60，之後幾天會保留。';
-      let changed = false;
-      if($('d_close').value !== '' && xc.value !== $('d_close').value){ xc.value = $('d_close').value; changed = true; }
-      if($('d_ma').value !== '' && xm.value !== $('d_ma').value){ xm.value = $('d_ma').value; changed = true; }
-      if(changed) saveDay();
-    } else {
-      off = false; lock = false;
-      const filled = ok(g('d_xclose')) && ok(g('d_xma'));
-      need = !filled;
-      txt = filled ? `已過除息日（今天是第 ${day} 個交易日）：基本單用這裡的乖離。` : `已過除息日（今天是第 ${day} 個交易日）：請補填除息日的收盤與 MA60。`;
+  // 依輸入的除息日，從行情找出除息日收盤、MA60，以及今天是除息後第幾個交易日
+  function exInfo(){
+    const none = {hasDiv:false, day:NaN, xclose:NaN, xma:NaN};
+    const exd = $('d_exdate').value;
+    if(!exd) return Object.assign(none, {note:'本月不除息：不需要除息日數據，基本單在月底下。'});
+    if(!market) return Object.assign(none, {note:'行情載入後會帶入除息日數據。'});
+    if(exd > market.date) return Object.assign(none, {note:`除息日 ${exd} 還沒到：不需要除息日數據。`, dayTxt:'還沒除息'});
+    const rows = market.recent, i = rows.findIndex(x => x.date === exd);
+    if(i < 0){
+      const err = exd < rows[0].date ? `除息日 ${exd} 太早，超出行情範圍（${rows[0].date} 起）。` : `${exd} 不是交易日，請確認除息日。`;
+      return Object.assign(none, {err, note:err});
     }
-    fs.classList.toggle('off', off);
-    xc.disabled = lock; xm.disabled = lock;
-    note.textContent = txt; note.classList.toggle('need', need);
+    const day = rows.length - 1 - i;
+    return {hasDiv:true, day, xclose:rows[i].close, xma:rows[i].ma60,
+      note: day === 0 ? '今天是除息日：基本單用今天的乖離。' : '已過除息日：基本單用除息日的乖離。',
+      dayTxt: `今天是除息後第 ${day} 個交易日`};
+  }
+  function syncDivUI(){
+    const ex = exInfo(), note = $('d_exnote');
+    $('d_xclose').value = ok(ex.xclose) ? ex.xclose : '';
+    $('d_xma').value = ok(ex.xma) ? ex.xma : '';
+    $('d_xclose').closest('fieldset').classList.toggle('off', !ex.hasDiv);
+    $('d_exday').textContent = ex.dayTxt || '';
+    note.textContent = ex.note; note.classList.toggle('need', !!ex.err);
   }
   function refreshDay(){
     syncDivUI();
@@ -752,17 +755,10 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   $('d_newmonth').addEventListener('click', () => {
     const c = cashInfo();
     if(ok(c.cash)) $('d_carry').value = Math.round(c.cash);
-    ['d_day','d_xclose','d_xma','d_div','d_spent'].forEach(id => $(id).value = '');
-    ['d_based','d_addon','d_last','d_hasdiv','d_dec'].forEach(id => $(id).checked = false);
+    ['d_exdate','d_div','d_spent'].forEach(id => $(id).value = '');
+    ['d_based','d_addon','d_last','d_dec'].forEach(id => $(id).checked = false);
     saveDay(); refreshDay(); scheduleChart();
     flash(ok(c.cash) ? `已把可用現金 ${fmt(c.cash)} 元帶入「上月結轉」。` : '已清空本月狀態，請填上月結轉。');
-  });
-  $('d_hasdiv').addEventListener('change', () => {
-    if($('d_hasdiv').checked){ if($('d_day').value.trim() === '') $('d_day').value = '0'; }
-    else { ['d_day','d_xclose','d_xma'].forEach(id => $(id).value = ''); }
-  });
-  $('d_day').addEventListener('change', () => {
-    if($('d_hasdiv').checked && $('d_day').value.trim() === '') $('d_day').value = '0';
   });
   DAY_NUM.concat(DAY_CHK).forEach(id => {
     $(id).addEventListener('input', () => { saveDay(); refreshDay(); lastChanged = null; scheduleChart(); });
@@ -771,7 +767,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 
   /* ---------- 行情 ---------- */
   const MARKET_URL = '/api/market';
-  let mktBusy = false;
+  let mktBusy = false, market = null;
   function mktStatus(t, warn){ const el = $('m_status'); el.textContent = t; el.classList.toggle('warn', !!warn); }
   async function loadMarket(){
     if(mktBusy) return;
@@ -783,6 +779,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
         mktStatus(r.status === 404 || r.status === 405 ? '這個網址沒有行情服務（只在你部署的 Cloudflare Worker 網址上有效）。' : '取得行情失敗' + (m && m.message ? '：' + m.message : '（狀態 ' + r.status + '）') + '。', true);
         return;
       }
+      market = m;
       $('d_close').value = m.close; $('d_ma5').value = m.ma5; $('d_ma').value = m.ma60;
       $('d_bbl').value = m.bbLower; $('d_mopen').value = m.monthOpenClose;
       $('d_mopen_hint').textContent = `${m.monthOpenDate} 的收盤，用來算本月預算`;

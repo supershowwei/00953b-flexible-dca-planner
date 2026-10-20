@@ -84,6 +84,7 @@ async function fetchCandles(url) {
     .sort((a, b) => (a.tradeDate < b.tradeDate ? -1 : a.tradeDate > b.tradeDate ? 1 : 0));
 }
 
+const RECENT_DAYS = 45;
 const mean = a => a.reduce((s, x) => s + x, 0) / a.length;
 const round = (v, d = 4) => Math.round(v * 10 ** d) / 10 ** d;
 
@@ -105,6 +106,11 @@ async function handleMarket() {
   const sd20 = Math.sqrt(mean(r20.map(x => (x - m20) ** 2)));
   const month = last.tradeDate.slice(0, 7);
   const monthFirst = daily.find(x => x.tradeDate.startsWith(month));
+  // 最近的每日收盤與 MA60，網頁用來查除息日的數據與除息後第幾個交易日
+  const recent = [];
+  for (let i = Math.max(59, daily.length - RECENT_DAYS); i < daily.length; i++) {
+    recent.push({ date: daily[i].tradeDate, close: daily[i].close, ma60: round(mean(closes.slice(i - 59, i + 1))) });
+  }
 
   return json({
     date: last.tradeDate,
@@ -115,6 +121,7 @@ async function handleMarket() {
     bbLower: round(m20 - 2 * sd20),
     monthOpenDate: monthFirst.tradeDate,
     monthOpenClose: monthFirst.close,
+    recent,
   });
 }
 
