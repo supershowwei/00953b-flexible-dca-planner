@@ -119,6 +119,9 @@ async function handleMarket() {
     ma5: round(mean(closes.slice(-5))),
     ma60: round(mean(closes.slice(-60))),
     bbLower: round(m20 - 2 * sd20),
+    // 網頁用來算加碼條件的 BB 下緣（倍數可調）
+    bbMid: round(m20),
+    bbSd: round(sd20, 6),
     monthOpenDate: monthFirst.tradeDate,
     monthOpenClose: monthFirst.close,
     recent,
