@@ -161,7 +161,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 <div class="wrap">
   <header>
     <h1>00953B 不定期不定額：參數流程圖</h1>
-    <p>每月固定一筆預算買基本單，成本低時另外加錢多買幾張；另有一筆加碼資金，價格跌到當月基本單價以下、又跌破還原 BB 下緣時動用，用完要等補回才能再加碼。每天 13:25 試撮開始後打開「今日判斷」，行情會自動帶入，再補上日曆、帳務與持倉，就能照流程圖得出今天該買幾張，收盤前高掛買進。左側是影響張數計算的規則數字，參數和數據都只存在這台裝置的瀏覽器裡。</p>
+    <p>每月固定一筆預算買基本單，成本低時另外加錢多買幾張；價格跌到當月基本單價以下、又跌破還原 BB 下緣時，會出現加碼建議，要不要加碼由你決定。每天 13:25 試撮開始後打開「今日判斷」，行情會自動帶入，再補上日曆、帳務與持倉，就能照流程圖得出今天該買幾張，收盤前高掛買進。左側是影響張數計算的規則數字，參數和數據都只存在這台裝置的瀏覽器裡。</p>
   </header>
 
   <div class="layout">
@@ -186,7 +186,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
         <div class="chart" id="chart"><p>流程圖載入中…</p></div>
         <div class="legend">
           <span><i class="sw base"></i>基本單</span>
-          <span><i class="sw add"></i>加碼單</span>
+          <span><i class="sw add"></i>加碼建議</span>
           <span><i class="sw pvs"></i>可調參數（剛改過的會閃一下）</span>
           <span><i class="sw hit"></i>今日判斷走過的路徑（其他節點會變淡）</span>
         </div>
@@ -230,11 +230,6 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
             <div class="field"><label for="d_based">本月基本單已下</label><input type="checkbox" id="d_based"></div>
             <div class="field"><label for="d_baseprice">本月基本單價（元）<span class="hint">按「記到本月帳務」會自動帶入</span></label><input type="number" id="d_baseprice" step="0.01" min="0" inputmode="decimal"></div>
           </fieldset>
-          <fieldset class="grp">
-            <legend>加碼資金</legend>
-            <div class="field"><label for="d_adddate">上次加碼日<span class="hint">按「記到本月帳務」會自動帶入；沒加碼過就留空</span></label><input type="date" id="d_adddate"></div>
-            <div class="calc-line" id="d_addstate"></div>
-          </fieldset>
         </div>
         <div class="result" id="d_out" aria-live="polite"></div>
         <div class="row">
@@ -242,7 +237,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
           <button type="button" id="d_newmonth">開始新月份</button>
           <span class="copied" id="d_msg" aria-live="polite"></span>
         </div>
-        <p class="note">張數計算會先扣手續費（依左側手續費參數）。加碼單用另外準備的加碼資金，不計入本月現金。</p>
+        <p class="note">張數計算會先扣手續費（依左側手續費參數）。加碼建議只是提醒，要不要加碼由你決定；有加碼再按「把結果記到本月帳務」，加碼的錢不計入本月現金。</p>
       </section>
 
     </div>
@@ -255,7 +250,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   const DEFAULTS = {
     budget:10, lowAdd:2,
     wait:1,
-    addLots:10, addRefill:3, addBB:1.5,
+    addLots:10, addBB:1.5,
     feeRate:0.1425, feeDisc:0.28, feeMin:1
   };
   const GROUPS = [
@@ -267,7 +262,6 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     {title:'加碼單', fields:[
       {k:'addLots', label:'加碼張數', min:1, max:30, step:1},
       {k:'addBB', label:'加碼 BB 倍數', hint:'收盤 ≤ 還原 BB(20) 中線 − 此值 × 標準差', min:0.5, max:3, step:0.1},
-      {k:'addRefill', label:'補回加碼資金（月）', hint:'加碼後隔幾個月才能再加碼', min:1, max:12, step:1},
     ]},
     {title:'手續費（用於計算張數）', fields:[
       {k:'feeRate', label:'手續費率（%）', min:0, max:1, step:0.0001},
@@ -340,11 +334,9 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     L.push(`A["每月開始<br/>新增 ${P('budget', q.budget + ' 張')}等值預算<br/>（月初收盤 × ${P('budget', fmt(q.budget*1000))} 股）"]`);
     L.push(`A --> B["每日尾盤取得<br/>收盤、還原價 BB 下緣"]`);
     L.push(`B --> D{"本月基本單<br/>已經下了？"}`);
-    L.push(`D -- 是 --> X{"加碼資金<br/>已補回？"}`);
-    L.push(`X -- 否 --> R["當日結束"]`);
-    L.push(`X -- 是 --> Y{"收盤 ＜ 本月基本單價<br/>且 ≤ 還原 BB(20, ${P('addBB', q.addBB + 'σ')}) 下緣？"}`);
-    L.push(`Y -- 否 --> R`);
-    L.push(`Y -- 是 --> G["加碼單：${P('addLots', q.addLots + ' 張')}<br/>尾盤高掛買進<br/>之後 ${P('addRefill', q.addRefill + ' 個月')}補回資金"]`);
+    L.push(`D -- 是 --> Y{"收盤 ＜ 本月基本單價<br/>且 ≤ 還原 BB(20, ${P('addBB', q.addBB + 'σ')}) 下緣？"}`);
+    L.push(`Y -- 否 --> R["當日結束"]`);
+    L.push(`Y -- 是 --> G["加碼建議：${P('addLots', q.addLots + ' 張')}<br/>尾盤高掛買進<br/>要不要加碼自行決定"]`);
     L.push('G --> R');
     L.push(`D -- 否 --> C{"收盤 ≤<br/>還原 BB 下緣？"}`);
     L.push(`C -- 是：提前到觸發日 --> E["基本單<br/>尾盤高掛買進"]`);
@@ -361,7 +353,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     L.push('M --> A');
     return L;
   }
-  const NODES = new Set(['A','B','C','D','E','I','R','K','Q','Z','M','X','Y','G']);
+  const NODES = new Set(['A','B','C','D','E','I','R','K','Q','Z','M','Y','G']);
   function hitLines(){
     if(!decision || !decision.path || !decision.path.length) return [];
     const ids = [...new Set(decision.path)].filter(x => NODES.has(x));
@@ -423,7 +415,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 
   // 收盤價、BB 下緣、月初收盤由 /api/market 帶入，不存也不同步
   // 除息後第幾個交易日由除息日對照行情算出，持倉均價由累計買進金額算出，也不存
-  const DAY_NUM = ['d_exdate','d_carry','d_extra','d_spent','d_shares','d_total','d_baseprice','d_adddate'];
+  const DAY_NUM = ['d_exdate','d_carry','d_extra','d_spent','d_shares','d_total','d_baseprice'];
   const DAY_CHK = ['d_last','d_based'];
   const DAY_STORE = '00953b-flow-day-v1';
   function saveDay(){
@@ -461,16 +453,6 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     const budget = ok(mopen) && mopen > 0 ? Math.round(mopen * 1000) * p.budget : NaN;
     return {carry, extra, spent, budget, cash: ok(budget) ? carry + budget + extra - spent : NaN};
   }
-  // 加碼資金：上次加碼的月份加上補回月數之後才能再用
-  const monthNo = d => +d.slice(0, 4) * 12 + (+d.slice(5, 7)) - 1;
-  const monthStr = n => `${Math.floor(n / 12)}-${String(n % 12 + 1).padStart(2, '0')}`;
-  function addInfo(){
-    const last = $('d_adddate').value;
-    if(!last) return {avail:true, txt:'加碼資金可用'};
-    const today = market ? market.date : new Date().toISOString().slice(0, 10);
-    const from = monthNo(last) + p.addRefill;
-    return monthNo(today) >= from ? {avail:true, txt:`加碼資金已補回，可用`} : {avail:false, from:monthStr(from), txt:`加碼資金補回中，${monthStr(from)} 起可再加碼`};
-  }
   function renderCashSum(){
     const c = cashInfo(), el = $('d_cashsum'); el.innerHTML = '';
     const ln = (a, b, cls) => { const d = document.createElement('div'); d.className = 'ln' + (cls ? ' ' + cls : ''); const s1 = document.createElement('span'); s1.textContent = a; const s2 = document.createElement('span'); s2.textContent = b; d.append(s1, s2); el.appendChild(d); };
@@ -492,11 +474,9 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     const abbl = market && ok(market.bbMid) && ok(market.bbSd) ? +(market.bbMid - p.addBB * market.bbSd).toFixed(4) : NaN;
     const v = {close:g('d_close'), bbl:g('d_bbl'), abbl, basePrice:g('d_baseprice'), day:ex.day, cash:cashInfo().cash};
     const hasDiv = ex.hasDiv, isLast = $('d_last').checked, based = $('d_based').checked;
-    const ai = addInfo();
 
     $('d_abbl').value = ok(abbl) ? abbl : '';
     $('d_abbl_hint').textContent = `還原收盤 20 日、${p.addBB} 倍標準差`;
-    $('d_addstate').textContent = ai.txt;
     $('d_avg').value = h.held ? px(h.avg) : '';
     $('d_costdiff').textContent = h.held && ok(v.close) ? `今日成本差 ${fmtPct((v.close/h.avg-1)*100)}（${v.close >= h.avg ? '成本高' : '成本低'}）` : '';
     renderCashSum();
@@ -524,19 +504,15 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 
     if(based){
       steps.push('本月基本單已經下了。');
-      path.push('X');
-      if(!ai.avail){ steps.push(`${ai.txt} → 今天不加碼。`); path.push('R'); }
-      else {
-        path.push('Y');
-        const below = ok(v.basePrice) && v.close < v.basePrice, inBand = ok(v.abbl) && v.close <= v.abbl;
-        steps.push(ok(v.basePrice) ? `收盤 ${px(v.close)} ${below ? '＜' : '≥'} 本月基本單價 ${px(v.basePrice)}。` : '沒有填本月基本單價，無法判斷加碼。');
-        steps.push(ok(v.abbl) ? `收盤 ${px(v.close)} ${inBand ? '≤' : '>'} 加碼 BB 下緣 ${px(v.abbl)}。` : '行情缺少加碼 BB 下緣，無法判斷加碼。');
-        if(below && inBand){
-          steps.push(`兩個條件都成立 → 動用加碼資金買 ${p.addLots} 張，之後 ${p.addRefill} 個月補回資金。`);
-          action = {type:'addon', n:p.addLots, price:v.close, extra:0};
-          path.push('G','R');
-        } else { steps.push('加碼條件沒有同時成立 → 今天不加碼。'); path.push('R'); }
-      }
+      path.push('Y');
+      const below = ok(v.basePrice) && v.close < v.basePrice, inBand = ok(v.abbl) && v.close <= v.abbl;
+      steps.push(ok(v.basePrice) ? `收盤 ${px(v.close)} ${below ? '＜' : '≥'} 本月基本單價 ${px(v.basePrice)}。` : '沒有填本月基本單價，無法判斷加碼。');
+      steps.push(ok(v.abbl) ? `收盤 ${px(v.close)} ${inBand ? '≤' : '>'} 加碼 BB 下緣 ${px(v.abbl)}。` : '行情缺少加碼 BB 下緣，無法判斷加碼。');
+      if(below && inBand){
+        steps.push(`兩個條件都成立 → 建議加碼 ${p.addLots} 張，要不要加碼由你決定。`);
+        action = {type:'addon', n:p.addLots, price:v.close, extra:0};
+        path.push('G','R');
+      } else { steps.push('加碼條件沒有同時成立 → 今天不加碼。'); path.push('R'); }
     } else if(trig){
       steps.push('本月基本單還沒下。', `收盤 ${px(v.close)} ≤ 還原 BB 下緣 ${px(v.bbl)} → 觸發，基本單提前到今天。`);
       path.push('C','E','K','Q','R'); doBase();
@@ -570,12 +546,12 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     const unit = Math.round(a.price * 1000), amt = a.n * unit, f = fee(amt);
     if(a.type === 'none') big.textContent = '今天不動作';
     else if(a.n === 0) big.textContent = '今天是基本單日，但買不到整張';
-    else big.textContent = `${a.type === 'addon' ? '加碼單' : '基本單'}：買 ${a.n} 張（尾盤高掛買進）`;
+    else big.textContent = a.type === 'addon' ? `加碼建議：買 ${a.n} 張（尾盤高掛買進）` : `基本單：買 ${a.n} 張（尾盤高掛買進）`;
     out.appendChild(big);
     if(a.n > 0){
       const dt = document.createElement('div');
       let t = `價格 ${px(a.price)}，成交 ${fmt(amt)} 元，手續費 ${fmt(f)} 元，`;
-      if(a.type === 'addon') t += '用加碼資金支付';
+      if(a.type === 'addon') t += '要不要加碼由你決定，有買再記帳';
       else if(a.extra > 0) t += `需另外加錢 ${fmt(a.extra)} 元，買後現金 0 元`;
       else t += `買後現金 ${fmt(d.cash - amt - f)} 元`;
       dt.textContent = t;
@@ -633,9 +609,8 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     const z = id => ok(g(id)) ? g(id) : 0;
     if(a.n > 0){
       const unit = Math.round(a.price * 1000), amt = a.n * unit, f = fee(amt);
-      if(a.type === 'addon'){
-        $('d_adddate').value = market ? market.date : new Date().toISOString().slice(0, 10);
-      } else {
+      // 加碼的錢另外出，只更新持倉
+      if(a.type !== 'addon'){
         $('d_spent').value = Math.round(z('d_spent') + amt + f);
         if(a.extra > 0) $('d_extra').value = Math.round(z('d_extra') + a.extra);
         $('d_baseprice').value = px(a.price);
