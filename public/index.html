@@ -190,7 +190,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 
       <section class="card" aria-label="今日判斷">
         <h2>今日判斷</h2>
-        <p class="sub">收盤價與還原 BB 下緣（基本單與加碼兩條）會自動從日K數據取得；填入本月除息日後，會自動算出今天是除息後第幾個交易日。本月基本單價位按「記錄這筆買進」會自動帶入，持有張數與累計買進金額會自動累加，持倉均價由這兩個數字算出；第一次使用請照券商的數字填。其餘欄位每天下單前自己填。試撮期間的收盤價是 13:25 前最後一筆成交價，實際成交以收盤價為準。頁面會照流程圖走一遍，並用粗框標出這次走過的路徑。</p>
+        <p class="sub">收盤價與還原 BB 下緣（基本單與加碼兩條）會自動從日K數據取得；填入本月除息日後，會自動算出今天是除息後第幾個交易日。持倉與本月進度請照券商的成交紀錄自己填，持倉均價由持有張數與累計買進金額算出。試撮期間的收盤價是 13:25 前最後一筆成交價，實際成交以收盤價為準。頁面會照流程圖走一遍，並用粗框標出這次走過的路徑。</p>
         <div class="inputs">
           <fieldset class="grp">
             <legend>今日行情</legend>
@@ -209,23 +209,22 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
           <fieldset class="grp">
             <legend>持倉</legend>
             <div class="field"><label for="d_shares">持有張數</label><input type="number" id="d_shares" step="1" min="0" inputmode="numeric" placeholder="0"></div>
-            <div class="field"><label for="d_total">累計買進金額（元）<span class="hint">含手續費；按「記錄這筆買進」會自動累加</span></label><input type="number" id="d_total" step="1" min="0" inputmode="numeric" placeholder="0"></div>
+            <div class="field"><label for="d_total">累計買進金額（元）<span class="hint">含手續費</span></label><input type="number" id="d_total" step="1" min="0" inputmode="numeric" placeholder="0"></div>
             <div class="field"><label for="d_avg">持倉均價（元）<span class="hint">累計買進金額 ÷ 持有股數</span></label><input type="number" id="d_avg" readonly tabindex="-1"></div>
             <div class="calc-line" id="d_costdiff"></div>
           </fieldset>
           <fieldset class="grp">
             <legend>本月進度</legend>
             <div class="field"><label for="d_based">本月基本單已下</label><input type="checkbox" id="d_based"></div>
-            <div class="field"><label for="d_baseprice">本月基本單價位<span class="hint">按「記錄這筆買進」會自動帶入</span></label><input type="number" id="d_baseprice" step="0.01" min="0" inputmode="decimal"></div>
+            <div class="field"><label for="d_baseprice">本月基本單價位<span class="hint">基本單的成交價</span></label><input type="number" id="d_baseprice" step="0.01" min="0" inputmode="decimal"></div>
           </fieldset>
         </div>
         <div class="result" id="d_out" aria-live="polite"></div>
         <div class="row">
-          <button type="button" id="d_apply">記錄這筆買進</button>
           <button type="button" id="d_newmonth">開始新月份</button>
           <span class="copied" id="d_msg" aria-live="polite"></span>
         </div>
-        <p class="note">頁面只給買進建議，不檢查資金夠不夠。手續費依左側參數估算，用來計算成交金額與累計買進金額。加碼建議只是提醒，要不要加碼由你決定；有買再按「記錄這筆買進」。</p>
+        <p class="note">頁面只給買進建議，不檢查資金夠不夠。手續費依左側參數估算，用來計算約略成交金額。加碼建議只是提醒，要不要加碼由你決定。買進後請自己更新持倉與本月進度。</p>
       </section>
 
     </div>
@@ -455,13 +454,12 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     const steps = [], path = ['A','B','D'];
     const trig = v.close <= v.bbl;
     const exPassed = hasDiv && ok(v.day) && v.day >= 0;
-    let action = {type:'none', n:0, price:v.close}, setBased = false;
+    let action = {type:'none', n:0, price:v.close};
 
     function doBase(){
       const r = baseLots(h.held ? v.close / h.avg - 1 : NaN);
       steps.push(h.held ? `收盤 ${px(v.close)}，持倉均價 ${px(h.avg)}。` : '持有張數是 0。', r.why);
       action = {type:'base', n:r.n, price:v.close};
-      setBased = true;
     }
 
     if(based){
@@ -493,7 +491,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     }
     path.push('Z');
     if(isLast) path.push('M');
-    return {path, steps, action, setBased, isLast};
+    return {path, steps, action, isLast};
   }
 
   function renderDecision(){
@@ -502,7 +500,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     if(d.miss){
       const m = document.createElement('div'); m.className = 'miss';
       m.textContent = '還缺：' + d.miss.join('、') + '。';
-      out.appendChild(m); $('d_apply').disabled = true; return;
+      out.appendChild(m); return;
     }
     const a = d.action, big = document.createElement('div'); big.className = 'big';
     const unit = Math.round(a.price * 1000), amt = a.n * unit, f = fee(amt);
@@ -512,7 +510,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     if(a.n > 0){
       const dt = document.createElement('div');
       let t = `價格 ${px(a.price)}，成交約 ${fmt(amt)} 元，手續費約 ${fmt(f)} 元，共約 ${fmt(amt + f)} 元`;
-      if(a.type === 'addon') t += '。要不要加碼由你決定，有買再記錄';
+      if(a.type === 'addon') t += '。要不要加碼由你決定';
       dt.textContent = t;
       out.appendChild(dt);
     }
@@ -524,7 +522,6 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
       me.textContent = '今天是本月最後交易日：下個月第一天記得按「開始新月份」。';
       out.appendChild(me);
     }
-    $('d_apply').disabled = !(a.n > 0 || d.setBased);
   }
 
   // 依輸入的除息日，從行情算出今天是除息後第幾個交易日
@@ -562,20 +559,6 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   }
   function flash(t){ const m = $('d_msg'); m.textContent = t; setTimeout(() => { if(m.textContent === t) m.textContent = ''; }, 5000); }
 
-  $('d_apply').addEventListener('click', () => {
-    const d = decision; if(!d || d.miss) return;
-    const a = d.action;
-    if(a.n > 0){
-      const unit = Math.round(a.price * 1000), amt = a.n * unit, f = fee(amt);
-      if(a.type === 'base') $('d_baseprice').value = px(a.price);
-      const h = holding();
-      $('d_total').value = Math.round(h.total + amt + f);
-      $('d_shares').value = h.sh + a.n;
-    }
-    if(d.setBased) $('d_based').checked = true;
-    saveDay(); refreshDay(); scheduleChart();
-    flash(a.type === 'addon' ? '已記錄加碼，並更新持倉。' : '已記錄基本單，並更新持倉。');
-  });
   $('d_newmonth').addEventListener('click', () => {
     ['d_exdate','d_baseprice'].forEach(id => $(id).value = '');
     ['d_based','d_last'].forEach(id => $(id).checked = false);
