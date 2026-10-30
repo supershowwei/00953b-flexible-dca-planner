@@ -161,7 +161,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 <div class="wrap">
   <header>
     <h1>00953B 不定期不定額：參數流程圖</h1>
-    <p>每天 13:25 試撮開始後打開「今日判斷」，行情會自動帶入，再補上日曆與帳務，就能照流程圖得出今天該買幾張，收盤前高掛幾檔買進。左側是影響張數計算的規則數字，參數和數據都只存在這台裝置的瀏覽器裡。</p>
+    <p>每月固定一筆預算：成本高時少買，把差額留在預算池；成本低時多買，從預算池撥出；預算池用完就照預算買。每天 13:25 試撮開始後打開「今日判斷」，行情會自動帶入，再補上日曆、帳務與持倉，就能照流程圖得出今天該買幾張，收盤前高掛買進。左側是影響張數計算的規則數字，參數和數據都只存在這台裝置的瀏覽器裡。</p>
   </header>
 
   <div class="layout">
@@ -186,8 +186,6 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
         <div class="chart" id="chart"><p>流程圖載入中…</p></div>
         <div class="legend">
           <span><i class="sw base"></i>基本單</span>
-          <span><i class="sw add"></i>加碼單</span>
-          <span><i class="sw skip"></i>不動作</span>
           <span><i class="sw pvs"></i>可調參數（剛改過的會閃一下）</span>
           <span><i class="sw hit"></i>今日判斷走過的路徑（其他節點會變淡）</span>
         </div>
@@ -195,43 +193,38 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 
       <section class="card" aria-label="今日判斷">
         <h2>今日判斷</h2>
-        <p class="sub">收盤價、MA5、MA60、還原 BB 下緣與月初收盤會自動從日K數據取得；填入本月除息日後，除息日數據也會自動帶入。其餘欄位每天下單前自己填。試撮期間的收盤價是 13:25 前最後一筆成交價，實際成交以收盤價為準。頁面會照流程圖走一遍，並用粗框標出這次走過的路徑。</p>
+        <p class="sub">收盤價、還原 BB 下緣與月初收盤會自動從日K數據取得；填入本月除息日後，會自動算出今天是除息後第幾個交易日。持有張數與持倉均價按「記到本月帳務」會自動更新，也可以照券商的數字自己改。其餘欄位每天下單前自己填。試撮期間的收盤價是 13:25 前最後一筆成交價，實際成交以收盤價為準。頁面會照流程圖走一遍，並用粗框標出這次走過的路徑。</p>
         <div class="inputs">
           <fieldset class="grp">
             <legend>今日行情</legend>
             <div class="mkt"><p class="hint-p" id="m_status" aria-live="polite">行情載入中…</p><button type="button" id="m_reload">重新取得</button></div>
             <div class="field"><label for="d_close">收盤價</label><input type="number" id="d_close" readonly tabindex="-1"></div>
-            <div class="field"><label for="d_ma5" id="lab_ma5">MA5<span class="hint">判斷加碼張數：收盤在 MA5 下方或上方</span></label><input type="number" id="d_ma5" readonly tabindex="-1"></div>
-            <div class="field"><label for="d_ma" id="lab_ma">MA60<span class="hint">計算乖離，決定基本單張數</span></label><input type="number" id="d_ma" readonly tabindex="-1"></div>
-            <div class="field"><label for="d_bbl" id="lab_bbl">還原 BB 下緣<span class="hint">還原收盤 20 日、2 倍標準差</span></label><input type="number" id="d_bbl" readonly tabindex="-1"></div>
-            <div class="calc-line" id="d_bias_today"></div>
+            <div class="field"><label for="d_bbl">還原 BB 下緣<span class="hint">還原收盤 20 日、2 倍標準差</span></label><input type="number" id="d_bbl" readonly tabindex="-1"></div>
           </fieldset>
           <fieldset class="grp">
             <legend>日曆</legend>
+            <p class="hint-p ex-note" id="d_exnote"></p>
             <div class="field"><label for="d_exdate">本月除息日<span class="hint">本月不除息就留空</span></label><input type="date" id="d_exdate"></div>
             <div class="calc-line" id="d_exday"></div>
             <div class="field"><label for="d_last">今天是本月最後交易日</label><input type="checkbox" id="d_last"></div>
-            <div class="field"><label for="d_dec">本月是 12 月</label><input type="checkbox" id="d_dec"></div>
           </fieldset>
           <fieldset class="grp">
-            <legend>除息日數據</legend>
-            <p class="hint-p ex-note" id="d_exnote"></p>
-            <div class="field"><label for="d_xclose">除息日收盤</label><input type="number" id="d_xclose" readonly tabindex="-1"></div>
-            <div class="field"><label for="d_xma" id="lab_xma">除息日 MA60</label><input type="number" id="d_xma" readonly tabindex="-1"></div>
-            <div class="calc-line" id="d_bias_ex"></div>
+            <legend>持倉</legend>
+            <div class="field"><label for="d_shares">持有張數</label><input type="number" id="d_shares" step="1" min="0" inputmode="numeric" placeholder="0"></div>
+            <div class="field"><label for="d_avg">持倉均價（元）<span class="hint">每股成本，含手續費</span></label><input type="number" id="d_avg" step="0.0001" min="0" inputmode="decimal"></div>
+            <div class="calc-line" id="d_costdiff"></div>
           </fieldset>
           <fieldset class="grp">
             <legend>本月現金</legend>
-            <div class="field"><label for="d_carry">上月結轉現金（元）<span class="hint">按「開始新月份」會自動帶入</span></label><input type="number" id="d_carry" step="1" min="0" inputmode="numeric" placeholder="0"></div>
+            <div class="field"><label for="d_carry">上月結轉現金（元）<span class="hint">也就是預算池；按「開始新月份」會自動帶入</span></label><input type="number" id="d_carry" step="1" min="0" inputmode="numeric" placeholder="0"></div>
             <div class="field"><label for="d_mopen">月初收盤<span class="hint" id="d_mopen_hint">本月第一個交易日的收盤，用來算本月預算</span></label><input type="number" id="d_mopen" readonly tabindex="-1"></div>
-            <div class="field"><label for="d_div">本月已入帳配息（元）<span class="hint">扣補充保費後的實收</span></label><input type="number" id="d_div" step="1" min="0" inputmode="numeric" placeholder="0"></div>
+            <div class="field"><label for="d_div">本月已入帳配息（元）<span class="hint">扣補充保費後的實收，併入預算池</span></label><input type="number" id="d_div" step="1" min="0" inputmode="numeric" placeholder="0"></div>
             <div class="field"><label for="d_spent">本月已花費（元）<span class="hint">含手續費；按「記到本月帳務」會自動累加</span></label><input type="number" id="d_spent" step="1" min="0" inputmode="numeric" placeholder="0"></div>
             <div class="cash-sum" id="d_cashsum"></div>
           </fieldset>
           <fieldset class="grp">
             <legend>本月進度</legend>
             <div class="field"><label for="d_based">本月基本單已下</label><input type="checkbox" id="d_based"></div>
-            <div class="field"><label for="d_addon">本月加碼機會已用掉<span class="hint">已加碼、已判定不加碼，或基本單是觸發提前下的</span></label><input type="checkbox" id="d_addon"></div>
           </fieldset>
         </div>
         <div class="result" id="d_out" aria-live="polite"></div>
@@ -240,7 +233,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
           <button type="button" id="d_newmonth">開始新月份</button>
           <span class="copied" id="d_msg" aria-live="polite"></span>
         </div>
-        <p class="note">張數計算會先扣手續費（依左側手續費參數），不含配息與補充保費。</p>
+        <p class="note">張數計算會先扣手續費（依左側手續費參數）。配息入帳後填進「本月已入帳配息」，會併入預算池。</p>
       </section>
 
     </div>
@@ -251,29 +244,15 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 <script>
 (function(){
   const DEFAULTS = {
-    budget:5, up:4, mid:6, deep:-2,
+    budget:10, shift:1,
     wait:3,
-    poolCap:5,
     feeRate:0.1425, feeDisc:0.28, feeMin:1
   };
-  const NAMES = {
-    budget:'每月預算', up:'線上張數', mid:'小幅線下張數', deep:'深跌門檻', monthCap:'單月上限',
-    decClear:'12 月清空',
-    wait:'基本單日', poolCapOn:'現金池上限開關',
-    poolCap:'現金池上限', addDown:'線下加碼', upAdd:'線上加碼'
-  };
-  const FEE_KEYS = ['feeRate','feeDisc','feeMin'];
-  const addOpts = [['all','全部現金池']].concat(Array.from({length:10},(_,i)=>[String(i+1),(i+1)+' 張']));
   const GROUPS = [
     {title:'基本單', fields:[
       {k:'budget', label:'每月預算（張）', min:1, max:30, step:1},
       {k:'wait', label:'除息後第幾個交易日下單', hint:'沒有觸發時的基本單日', min:0, max:15, step:1},
-      {k:'up', label:'線上：基本單張數', hint:'乖離 ≥ 0', min:0, max:30, step:1},
-      {k:'mid', label:'小幅線下：基本單張數', hint:'門檻 ＜ 乖離 ＜ 0', min:0, max:30, step:1},
-      {k:'deep', label:'深跌門檻（%）', hint:'乖離 ≤ 此值：預算＋全部現金池', min:-15, max:-0.1, step:0.1},
-    ]},
-    {title:'現金池', fields:[
-      {k:'poolCap', label:'現金池上限（張）', min:1, max:60, step:1}
+      {k:'shift', label:'成本高少買、成本低多買（張）', hint:'成本高買「預算 − 此值」，成本低買「預算 ＋ 此值」', min:0, max:30, step:1},
     ]},
     {title:'手續費（用於計算張數）', fields:[
       {k:'feeRate', label:'手續費率（%）', min:0, max:1, step:0.0001},
@@ -282,14 +261,17 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     ]}
   ];
   const STORE = '00953b-flow-params-v1';
+  // 規則改版時遞增：舊版存下的參數（本機或雲端）不再套用
+  const PARAM_VER = 2;
 
-  const FIXED = {bbBase:'adj', moveBase:true, exec:'same', decClear:true, poolCapOn:true, addDown:'all', upAdd:0};
-  let p = Object.assign({}, DEFAULTS, FIXED);
+  let p = Object.assign({}, DEFAULTS);
+  function takeParams(o){ for(const k in DEFAULTS){ if(k in o && typeof o[k] === typeof DEFAULTS[k]) p[k] = o[k]; } }
   try{
     const s = localStorage.getItem(STORE);
-    if(s){ const o = JSON.parse(s); for(const k in DEFAULTS){ if(k in o && typeof o[k] === typeof DEFAULTS[k]) p[k] = o[k]; } }
+    if(s){ const o = JSON.parse(s); if(o && o.v === PARAM_VER) takeParams(o); }
   }catch(e){}
-  function save(){ try{ localStorage.setItem(STORE, JSON.stringify(p)); }catch(e){} markDirty(); }
+  const storedParams = () => Object.assign({v:PARAM_VER}, p);
+  function save(){ try{ localStorage.setItem(STORE, JSON.stringify(storedParams())); }catch(e){} markDirty(); }
 
   const $ = id => document.getElementById(id);
   const nf = new Intl.NumberFormat('zh-TW');
@@ -306,160 +288,83 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
       const id = 'p_' + f.k;
       const lab = document.createElement('label'); lab.htmlFor = id; lab.textContent = f.label;
       if(f.hint){ const h = document.createElement('span'); h.className = 'hint'; h.textContent = f.hint; lab.appendChild(h); }
-      let inp;
-      if(f.type === 'bool'){ inp = document.createElement('input'); inp.type = 'checkbox'; }
-      else if(f.type === 'sel'){
-        inp = document.createElement('select');
-        f.opts.forEach(([v,t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; inp.appendChild(o); });
-      } else {
-        inp = document.createElement('input'); inp.type = 'number'; inp.min = f.min; inp.max = f.max; inp.step = f.step; inp.inputMode = 'decimal';
-      }
+      const inp = document.createElement('input'); inp.type = 'number'; inp.min = f.min; inp.max = f.max; inp.step = f.step; inp.inputMode = 'decimal';
       inp.id = id;
       row.appendChild(lab); row.appendChild(inp); fs.appendChild(row);
-      const handler = () => {
-        let v;
-        if(f.type === 'bool') v = inp.checked;
-        else if(f.type === 'sel') v = inp.value;
-        else {
-          if(inp.value === '') return;
-          v = parseFloat(inp.value); if(!isFinite(v)) return;
-          if(v < f.min || v > f.max) return;
-          if(f.step >= 1) v = Math.round(v);
-        }
+      inp.addEventListener('input', () => {
+        if(inp.value === '') return;
+        let v = parseFloat(inp.value); if(!isFinite(v)) return;
+        if(v < f.min || v > f.max) return;
+        if(f.step >= 1) v = Math.round(v);
         p[f.k] = v; lastChanged = f.k; save(); update();
-      };
-      inp.addEventListener(f.type === 'bool' || f.type === 'sel' ? 'change' : 'input', handler);
-      if(!f.type){
-        inp.addEventListener('change', () => {
-          let v = parseFloat(inp.value);
-          if(!isFinite(v)) v = p[f.k];
-          v = Math.min(f.max, Math.max(f.min, v));
-          if(f.step >= 1) v = Math.round(v);
-          inp.value = v; p[f.k] = v; lastChanged = f.k; save(); update();
-        });
-      }
+      });
+      inp.addEventListener('change', () => {
+        let v = parseFloat(inp.value);
+        if(!isFinite(v)) v = p[f.k];
+        v = Math.min(f.max, Math.max(f.min, v));
+        if(f.step >= 1) v = Math.round(v);
+        inp.value = v; p[f.k] = v; lastChanged = f.k; save(); update();
+      });
     });
     fieldsEl.appendChild(fs);
   });
   function syncInputs(){
     GROUPS.forEach(g => g.fields.forEach(f => {
       const inp = $('p_' + f.k);
-      if(f.type === 'bool') inp.checked = !!p[f.k];
-      else inp.value = p[f.k];
-      const row = inp.closest('.field');
-      row.classList.toggle('changed', p[f.k] !== DEFAULTS[f.k]);
-      if(f.dep){ const off = !p[f.dep]; row.classList.toggle('disabled', off); inp.disabled = off; }
+      inp.value = p[f.k];
+      inp.closest('.field').classList.toggle('changed', p[f.k] !== DEFAULTS[f.k]);
     }));
   }
   let lastChanged = null;
-  $('reset').addEventListener('click', () => { p = Object.assign({}, DEFAULTS, FIXED); lastChanged = null; save(); syncInputs(); update(); });
+  $('reset').addEventListener('click', () => { p = Object.assign({}, DEFAULTS); lastChanged = null; save(); syncInputs(); update(); });
 
   /* ---------- 流程圖原始碼 ---------- */
+  const hiLots = q => Math.max(0, q.budget - q.shift);
+  const loLots = q => q.budget + q.shift;
   function buildCode(q, rich){
     const P = (k, t) => rich ? `<span class='pv' data-k='${k}'>${t}</span>` : String(t);
-    const bb = q.bbBase === 'adj' ? '還原' : '原始';
-    const ex = q.exec === 'same' ? '尾盤高掛買進' : '隔日開盤';
-    const addT = q.addDown === 'all' ? '全部現金池' : q.addDown + ' 張';
     const L = ['flowchart TD'];
-    L.push(`A["每月開始<br/>新增 ${P('budget', q.budget + ' 張')}等值預算<br/>（月初收盤 × ${P('budget', fmt(q.budget*1000))} 股）<br/>已入帳配息併入現金池"]`);
-    L.push(`A --> B["每日尾盤取得<br/>收盤、MA5、MA60<br/>${bb}價 BB 下緣"]`);
-    L.push(`B --> C{"收盤 ≤<br/>${bb} BB 下緣？"}`);
-    L.push(`C -- 是 --> D{"本月基本單<br/>已經下了？"}`);
-    if(q.moveBase){
-      L.push(`D -- 否 --> E["基本單提前到觸發日<br/>${ex}<br/>本月不再加碼"]`);
-    } else {
-      L.push(`D -- 否 --> W["${P('moveBase','不提前')}<br/>照原定日下基本單"]`);
-      L.push(`W --> I`);
-    }
-    L.push(`D -- 是 --> X{"基本單之後的<br/>第一次觸發？"}`);
-    L.push(`X -- 否 --> H["忽略"]`);
-    L.push(`X -- 是 --> F{"收盤在<br/>MA5 下方？"}`);
-    L.push(`F -- 是 --> G["加碼單：${addT}<br/>${ex}"]`);
-    if(q.upAdd > 0) L.push(`F -- 否 --> G2["加碼單：${P('upAdd', q.upAdd + ' 張')}<br/>${ex}"]`);
-    else L.push(`F -- 否 --> H2["不加碼<br/>本月加碼機會用掉"]`);
+    L.push(`A["每月開始<br/>新增 ${P('budget', q.budget + ' 張')}等值預算<br/>（月初收盤 × ${P('budget', fmt(q.budget*1000))} 股）<br/>已入帳配息併入預算池"]`);
+    L.push(`A --> B["每日尾盤取得<br/>收盤、還原價 BB 下緣"]`);
+    L.push(`B --> D{"本月基本單<br/>已經下了？"}`);
+    L.push(`D -- 是 --> R["當日結束"]`);
+    L.push(`D -- 否 --> C{"收盤 ≤<br/>還原 BB 下緣？"}`);
+    L.push(`C -- 是：提前到觸發日 --> E["基本單<br/>尾盤高掛買進"]`);
     L.push(`C -- 否 --> I{"今天是除息後<br/>第 ${P('wait', q.wait)} 個交易日？<br/>無除息的月份改為月底"}`);
-    L.push(`I -- 否 --> R["當日結束"]`);
-    L.push(`I -- 是 --> J{"本月基本單<br/>已經下了？"}`);
-    L.push(`J -- 是 --> R`);
-    L.push(`J -- 否 --> E2["基本單<br/>尾盤高掛買進"]`);
-    let k1 = `乖離 ≥ 0：${P('up', q.up + ' 張')}`;
-    if(q.poolCapOn) k1 += `<br/>（買後現金池超過 ${P('poolCap', q.poolCap + ' 張')}金額<br/>則改買 ${P('budget', q.budget + ' 張')}）`;
-    const ks = [k1,
-      `${P('deep', fmtPct(q.deep))} ＜ 乖離 ＜ 0：${P('mid', q.mid + ' 張')}`,
-      `乖離 ≤ ${P('deep', fmtPct(q.deep))}：${P('budget', q.budget + ' 張')} ＋ 全部現金池`];
-    if(q.decClear) ks.push('12 月：預算＋現金池全部買');
-    L.push(`K["基本單張數（依除息日乖離）<br/>乖離 = 收盤 ÷ MA60 − 1<br/>${ks.join('<br/>')}"]`);
-    if(q.moveBase) L.push('E --> K');
-    L.push('E2 --> K');
-    L.push(`Q["資金不足時<br/>買得起的最大張數"]`);
-    L.push('K --> Q', 'G --> Q');
-    if(q.upAdd > 0) L.push('G2 --> Q'); else L.push('H2 --> R');
-    L.push('Q --> R', 'H --> R');
+    L.push(`I -- 是 --> E`);
+    L.push(`I -- 否 --> R`);
+    L.push(`K["基本單張數（依持倉成本）<br/>成本差 = 收盤 ÷ 持倉均價 − 1<br/>成本差 ≥ 0（成本高）：${P('shift', hiLots(q) + ' 張')}<br/>差額留在預算池<br/>成本差 ＜ 0（成本低）：${P('shift', loLots(q) + ' 張')}<br/>從預算池撥出<br/>還沒有持股：${P('budget', q.budget + ' 張')}"]`);
+    L.push('E --> K');
+    L.push(`Q["預算池不夠時少撥<br/>買到買得起的最大張數"]`);
+    L.push('K --> Q', 'Q --> R');
     L.push(`R --> Z{"本月最後<br/>交易日？"}`);
     L.push('Z -- 否 --> B');
-    L.push(`Z -- 是 --> M["未用資金結轉<br/>進入下一個月"]`);
+    L.push(`Z -- 是 --> M["未用資金留在預算池<br/>進入下一個月"]`);
     L.push('M --> A');
     return L;
   }
-  function existing(q){
-    return new Set(['A','B','C','D','X','H','F','G','I','R','J','E2','K','Q','Z','M']
-      .concat(q.moveBase ? ['E'] : ['W']).concat(q.upAdd > 0 ? ['G2'] : ['H2']));
-  }
-  function hitLines(q){
+  const NODES = new Set(['A','B','C','D','E','I','R','K','Q','Z','M']);
+  function hitLines(){
     if(!decision || !decision.path || !decision.path.length) return [];
-    const ex = existing(q), ids = [...new Set(decision.path)].filter(x => ex.has(x));
+    const ids = [...new Set(decision.path)].filter(x => NODES.has(x));
     if(!ids.length) return [];
     return [`classDef hit stroke:${css('--hit')},stroke-width:5px`, `class ${ids.join(',')} hit`];
   }
   function css(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
-  function styleLines(q){
-    const c = {s:css('--surface'), i:css('--ink'), m:css('--muted'), l:css('--line'), a:css('--accent'), as:css('--accent-soft'), am:css('--amber'), ams:css('--amber-soft'), g:css('--grey-soft')};
-    const base = ['E2','K'].concat(q.moveBase ? ['E'] : []);
-    const add = ['G'].concat(q.upAdd > 0 ? ['G2'] : []);
-    const skip = ['H'].concat(q.upAdd > 0 ? [] : ['H2']).concat(q.moveBase ? [] : ['W']);
+  function styleLines(){
+    const c = {s:css('--surface'), i:css('--ink'), l:css('--line'), a:css('--accent'), as:css('--accent-soft')};
     return [
       `classDef base fill:${c.as},stroke:${c.a},stroke-width:1.5px,color:${c.i}`,
-      `classDef add fill:${c.ams},stroke:${c.am},stroke-width:1.5px,color:${c.i}`,
-      `classDef skip fill:${c.g},stroke:${c.l},color:${c.m}`,
       `classDef flow fill:${c.s},stroke:${c.l},color:${c.i}`,
-      `class ${base.join(',')} base`,
-      `class ${add.join(',')} add`,
-      `class ${skip.join(',')} skip`,
+      `class E,K base`,
       `class A,B,Q,R,M flow`
-    ].concat(hitLines(q));
-  }
-
-  /* ---------- 狀態與警示 ---------- */
-  function renderStatus(){
-    const diff = Object.keys(DEFAULTS).filter(k => !FEE_KEYS.includes(k) && p[k] !== DEFAULTS[k]);
-    const st = $('status');
-    st.innerHTML = '';
-    const b = document.createElement('div');
-    if(diff.length === 0){
-      b.className = 'badge ok';
-      b.textContent = '與回測設定相同。回測期間 2024/12～2026/09，總報酬 7.15%，買價平均比當月均價低 0.47%。';
-    } else {
-      b.className = 'badge dev';
-      b.textContent = `已調整 ${diff.length} 項（${diff.map(k => NAMES[k]).join('、')}）。這組參數沒有經過回測，效果需要另外驗證。`;
-    }
-    st.appendChild(b);
-    const w = [];
-    if(p.up > p.budget) w.push(`線上張數（${p.up}）大於每月預算（${p.budget}），線上月份會反過來消耗現金池。`);
-    if(p.up === p.budget) w.push('線上張數等於每月預算，線上月份不會少買，現金池只能靠配息累積。');
-    if(p.mid < p.budget) w.push(`小幅線下張數（${p.mid}）小於每月預算，跌破 MA60 反而買得比較少。`);
-    if(p.mid < p.up) w.push('小幅線下張數小於線上張數，與「線下多買」的方向相反。');
-    if(p.monthCap < p.mid) w.push(`單月上限（${p.monthCap}）小於小幅線下張數（${p.mid}），小幅線下時永遠買不到設定的張數。`);
-    if(p.monthCap < p.budget) w.push(`單月上限（${p.monthCap}）小於每月預算（${p.budget}），每月都會有錢買不完。`);
-    if(p.poolCapOn && p.poolCap < p.budget - p.up) w.push(`現金池上限（${p.poolCap} 張）比線上每月存下的張數（${p.budget - p.up} 張）還少，線上月份幾乎都會改買滿 ${p.budget} 張。`);
-    if(!p.poolCapOn) w.push('現金池沒有上限。回測顯示現金池無限累積時，閒置資金少領的配息會拖累總報酬。');
-    const ul = $('warns'); ul.innerHTML = '';
-    w.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+    ].concat(hitLines());
   }
 
   /* ---------- 繪圖 ---------- */
-  let seq = 0, mermaidReady = false;
+  let seq = 0;
   async function renderChart(){
-    const code = buildCode(p, true).concat(styleLines(p)).join('\n');
+    const code = buildCode(p, true).concat(styleLines()).join('\n');
     const el = $('chart');
     if(!window.mermaid){ el.innerHTML = '<p class="err">流程圖元件沒有載入成功，請重新整理頁面。下方的今日判斷仍可正常使用。</p>'; return; }
     const my = ++seq;
@@ -496,10 +401,10 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   function cost(n, unit){ return n * unit + fee(n * unit); }
   function maxAff(cash, unit){ let n = 0; while(cost(n + 1, unit) <= cash && n < 10000) n++; return n; }
 
-  // 收盤價、MA5、MA60、BB 下緣、月初收盤由 /api/market 帶入，不存也不同步
-  // 除息日收盤、MA60 與除息後第幾個交易日由除息日對照行情算出，也不存
-  const DAY_NUM = ['d_exdate','d_carry','d_div','d_spent'];
-  const DAY_CHK = ['d_last','d_dec','d_based','d_addon'];
+  // 收盤價、BB 下緣、月初收盤由 /api/market 帶入，不存也不同步
+  // 除息後第幾個交易日由除息日對照行情算出，也不存
+  const DAY_NUM = ['d_exdate','d_carry','d_div','d_spent','d_shares','d_avg'];
+  const DAY_CHK = ['d_last','d_based'];
   const DAY_STORE = '00953b-flow-day-v1';
   function saveDay(){
     const o = {}; DAY_NUM.forEach(id => o[id] = $(id).value); DAY_CHK.forEach(id => o[id] = $(id).checked);
@@ -518,36 +423,17 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   const ok = v => isFinite(v);
   const px = v => String(+v.toFixed(4));
 
-  function updateDayLabels(){
-    const bb = p.bbBase === 'adj' ? '還原' : '原始';
-    $('lab_bbl').firstChild.textContent = `${bb} BB 下緣`;
-  }
-
-  function baseLots(cash, unit, bias, dec, bought){
-    const aff = maxAff(cash, unit), clear = dec && p.decClear;
+  // 成本差 = 收盤 ÷ 持倉均價 − 1；還沒有持股時是 NaN
+  function baseLots(cash, unit, diff){
+    const aff = maxAff(cash, unit), hi = hiLots(p), lo = loLots(p);
     let n, why;
-    if(clear){ n = aff; why = '12 月：預算＋現金池全部買進，不受單月上限。'; }
-    else if(bias >= 0){
-      n = p.up; why = `乖離 ${fmtPct(bias*100)} ≥ 0 → 線上 ${p.up} 張。`;
-      const capAmt = p.poolCap * unit;
-      if(p.poolCapOn && cash - p.up * unit > capAmt){
-        const extra = Math.max(0, Math.floor((cash - p.budget * unit - capAmt) / unit));
-        n = Math.max(p.up, p.budget + extra);
-        why += `但買 ${p.up} 張後現金池會超過上限 ${fmt(capAmt)} 元 → 改買 ${n} 張。`;
-      }
-    } else if(bias*100 > p.deep){ n = p.mid; why = `乖離 ${fmtPct(bias*100)} 介於 ${fmtPct(p.deep)} 與 0 之間 → 小幅線下 ${p.mid} 張。`; }
-    else { n = aff; why = `乖離 ${fmtPct(bias*100)} ≤ ${fmtPct(p.deep)} → ${p.budget} 張＋全部現金池。`; }
-    if(n > aff){ why += `現金扣掉手續費後只夠 ${aff} 張。`; n = aff; }
-    return {n, why};
-  }
-  function addonLots(cash, unit, below, dec, bought){
-    const aff = maxAff(cash, unit);
-    let n, why;
-    if(below){
-      n = p.addDown === 'all' ? aff : +p.addDown;
-      why = p.addDown === 'all' ? '收盤在 MA5 下方 → 加碼動用全部現金池。' : `收盤在 MA5 下方 → 加碼 ${p.addDown} 張。`;
-    } else { n = p.upAdd; why = `收盤在 MA5 上方 → 加碼 ${p.upAdd} 張。`; }
-    if(n > aff){ n = aff; why += aff === 0 ? '現金不足 1 張，不買。' : `現金扣掉手續費後只夠 ${aff} 張。`; }
+    if(!ok(diff)){ n = p.budget; why = `還沒有持股 → 照預算買 ${p.budget} 張。`; }
+    else if(diff >= 0){ n = hi; why = `成本差 ${fmtPct(diff*100)} ≥ 0（成本高）→ 買 ${hi} 張，${p.budget - hi} 張的錢留在預算池。`; }
+    else { n = lo; why = `成本差 ${fmtPct(diff*100)} ＜ 0（成本低）→ 買 ${lo} 張，從預算池撥 ${p.shift} 張。`; }
+    if(n > aff){
+      why += aff >= p.budget ? `預算池只夠撥 ${aff - p.budget} 張 → 買 ${aff} 張。` : `現金扣掉手續費後只夠 ${aff} 張。`;
+      n = aff;
+    }
     return {n, why};
   }
 
@@ -560,120 +446,69 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   function renderCashSum(){
     const c = cashInfo(), el = $('d_cashsum'); el.innerHTML = '';
     const ln = (a, b, cls) => { const d = document.createElement('div'); d.className = 'ln' + (cls ? ' ' + cls : ''); const s1 = document.createElement('span'); s1.textContent = a; const s2 = document.createElement('span'); s2.textContent = b; d.append(s1, s2); el.appendChild(d); };
-    ln('上月結轉', fmt(c.carry) + ' 元');
+    ln('上月結轉（預算池）', fmt(c.carry) + ' 元');
     ln(`本月預算（月初收盤 × ${fmt(p.budget * 1000)} 股）`, ok(c.budget) ? fmt(c.budget) + ' 元' : '填月初收盤');
     ln('已入帳配息', '＋' + fmt(c.div) + ' 元');
     ln('已花費', '−' + fmt(c.spent) + ' 元');
     ln('可用現金', ok(c.cash) ? fmt(c.cash) + ' 元' : '—', 'total');
   }
+  function holding(){
+    const sh = g('d_shares'), avg = g('d_avg');
+    return {sh: ok(sh) ? sh : 0, avg, held: ok(sh) && sh > 0 && ok(avg) && avg > 0};
+  }
 
   let decision = null;
   function decide(){
-    const ex = exInfo();
-    const v = {close:g('d_close'), ma5:g('d_ma5'), ma:g('d_ma'), bbl:g('d_bbl'), open:NaN, day:ex.day,
-      xclose:ex.xclose, xma:ex.xma, cash:cashInfo().cash, bought:0};
-    const hasDiv = ex.hasDiv, isLast = $('d_last').checked, dec = $('d_dec').checked;
-    const based = $('d_based').checked, addonUsed = $('d_addon').checked;
-    const bb = p.bbBase === 'adj' ? '還原' : '原始';
+    const ex = exInfo(), h = holding();
+    const v = {close:g('d_close'), bbl:g('d_bbl'), day:ex.day, cash:cashInfo().cash};
+    const hasDiv = ex.hasDiv, isLast = $('d_last').checked, based = $('d_based').checked;
 
-    $('d_bias_today').textContent = ok(v.close) && ok(v.ma) && v.ma > 0 ? `今日乖離 ${fmtPct((v.close/v.ma-1)*100)}` : '';
-    $('d_bias_ex').textContent = ok(v.xclose) && ok(v.xma) && v.xma > 0 ? `除息日乖離 ${fmtPct((v.xclose/v.xma-1)*100)}` : '';
+    $('d_costdiff').textContent = h.held && ok(v.close) ? `今日成本差 ${fmtPct((v.close/h.avg-1)*100)}（${v.close >= h.avg ? '成本高' : '成本低'}）` : '';
     renderCashSum();
 
     const miss = [];
     if(!ok(v.close)) miss.push('收盤價');
-    if(!ok(v.ma5)) miss.push('MA5');
-    if(!ok(v.ma)) miss.push('MA60');
-    if(!ok(v.bbl)) miss.push(`${bb} BB 下緣`);
+    if(!ok(v.bbl)) miss.push('還原 BB 下緣');
     if(!ok(v.cash)) miss.push('月初收盤');
     if(ex.err) miss.push('正確的本月除息日');
+    if(h.sh > 0 && !h.held) miss.push('持倉均價');
     if(miss.length) return {miss, path:[]};
 
-    const steps = [], path = ['A','B','C'];
+    const steps = [], path = ['A','B','D'];
     const trig = v.close <= v.bbl;
-    const biasToday = v.close / v.ma - 1;
-    const below = v.close < v.ma5;
     const exPassed = hasDiv && ok(v.day) && v.day >= 0;
-    let action = {type:'none', n:0, price:v.close, why:''}, consume = false, setBased = false;
+    let action = {type:'none', n:0, price:v.close}, setBased = false;
 
-    function exBias(){
-      if(!hasDiv) return {b:biasToday, src:'本月尚未除息，用今天的乖離'};
-      if(v.day === 0) return {b:biasToday, src:'今天是除息日，用今天的乖離'};
-      if(exPassed){
-        if(ok(v.xclose) && ok(v.xma) && v.xma > 0) return {b:v.xclose / v.xma - 1, src:'用除息日的乖離'};
-        return null;
-      }
-      return {b:biasToday, src:'還沒除息，用今天的乖離'};
-    }
-    function doBase(price, label){
-      const eb = exBias();
-      if(!eb){ return {needEx:true}; }
-      const unit = Math.round(price * 1000);
-      const r = baseLots(v.cash, unit, eb.b, dec, v.bought);
-      steps.push(`${eb.src}：${fmtPct(eb.b*100)}。`, r.why);
-      action = {type:'base', n:r.n, price, why:r.why, label};
+    function doBase(){
+      const unit = Math.round(v.close * 1000);
+      const r = baseLots(v.cash, unit, h.held ? v.close / h.avg - 1 : NaN);
+      steps.push(h.held ? `收盤 ${px(v.close)}，持倉均價 ${px(h.avg)}。` : '持有張數是 0。', r.why);
+      action = {type:'base', n:r.n, price:v.close};
       setBased = true;
-      return {};
     }
 
-    steps.push(trig ? `收盤 ${px(v.close)} ≤ ${bb} BB 下緣 ${px(v.bbl)} → 觸發。` : `收盤 ${px(v.close)} > ${bb} BB 下緣 ${px(v.bbl)} → 沒有觸發。`);
-    let goBaseDay = !trig;
-    if(trig){
-      path.push('D');
-      if(!based){
-        if(p.moveBase){
-          steps.push('本月基本單還沒下 → 提前到今天，本月不再加碼。');
-          path.push('E','K','Q','R');
-          const price = p.exec === 'next' ? (ok(v.open) ? v.open : v.close) : v.close;
-          const r = doBase(price, p.exec === 'next' ? '隔日開盤' : '尾盤高掛買進');
-          if(r.needEx) return {miss:['除息日收盤','除息日 MA60'], path, exNote:true};
-          consume = true;
-        } else {
-          steps.push('本月基本單還沒下，但設定為不提前 → 照原定日判斷。');
-          path.push('W'); goBaseDay = true;
-        }
-      } else {
-        path.push('X');
-        if(addonUsed){ steps.push('本月加碼機會已用掉 → 忽略這次觸發。'); path.push('H','R'); }
-        else {
-          path.push('F');
-          const price = p.exec === 'next' ? (ok(v.open) ? v.open : v.close) : v.close;
-          const unit = Math.round(price * 1000);
-          if(below || p.upAdd > 0){
-            const r = addonLots(v.cash, unit, below, dec, v.bought);
-            steps.push(`收盤 ${px(v.close)} ${below ? '＜' : '≥'} MA5 ${px(v.ma5)}。`, r.why);
-            action = {type:'addon', n:r.n, price, why:r.why, label: p.exec === 'next' ? '隔日開盤' : '尾盤高掛買進'};
-            path.push(below ? 'G' : 'G2','Q','R');
-          } else {
-            steps.push(`收盤 ${px(v.close)} ≥ MA5 ${px(v.ma5)} → 不加碼，本月加碼機會用掉。`);
-            path.push('H2','R');
-          }
-          consume = true;
-        }
-      }
-    }
-    if(goBaseDay){
+    if(based){
+      steps.push('本月基本單已經下了 → 今天不動作。');
+      path.push('R');
+    } else if(trig){
+      steps.push('本月基本單還沒下。', `收盤 ${px(v.close)} ≤ 還原 BB 下緣 ${px(v.bbl)} → 觸發，基本單提前到今天。`);
+      path.push('C','E','K','Q','R'); doBase();
+    } else {
+      steps.push('本月基本單還沒下。', `收盤 ${px(v.close)} > 還原 BB 下緣 ${px(v.bbl)} → 沒有觸發。`);
+      path.push('C');
       path.push('I');
       let isBaseDay, dayWhy;
       if(!hasDiv){ isBaseDay = isLast; dayWhy = isLast ? '本月沒有除息，今天是本月最後交易日 → 基本單日。' : '本月尚未除息，還不是基本單日（整月不除息才在月底下）。'; }
       else if(exPassed && v.day === p.wait){ isBaseDay = true; dayWhy = `今天是除息後第 ${p.wait} 個交易日 → 基本單日。`; }
-      else if(isLast){ isBaseDay = true; dayWhy = '除息後第 ' + p.wait + ' 個交易日落在下個月或還沒除息，今天是最後交易日 → 基本單日。'; }
-      else { isBaseDay = false; dayWhy = exPassed ? `今天是除息後第 ${v.day} 個交易日，不是第 ${p.wait} 日。` : (hasDiv ? '還沒除息，不是基本單日。' : ''); }
-      if(dayWhy) steps.push(dayWhy);
+      else if(isLast){ isBaseDay = true; dayWhy = exPassed && v.day > p.wait ? `今天是本月最後交易日，已過除息後第 ${p.wait} 個交易日 → 基本單日。` : `除息後第 ${p.wait} 個交易日落在下個月，今天是最後交易日 → 基本單日。`; }
+      else { isBaseDay = false; dayWhy = `今天是除息後第 ${v.day} 個交易日，不是第 ${p.wait} 日。`; }
+      steps.push(dayWhy);
       if(!isBaseDay){ path.push('R'); }
-      else {
-        path.push('J');
-        if(based){ steps.push('本月基本單已經下了。'); path.push('R'); }
-        else {
-          path.push('E2','K','Q','R');
-          const r = doBase(v.close, '尾盤高掛買進');
-          if(r.needEx) return {miss:['除息日收盤','除息日 MA60'], path, exNote:true};
-        }
-      }
+      else { path.push('E','K','Q','R'); doBase(); }
     }
     path.push('Z');
     if(isLast) path.push('M');
-    return {path, steps, action, consume, setBased, isLast, cash:v.cash, bought:v.bought};
+    return {path, steps, action, setBased, isLast, cash:v.cash};
   }
 
   function renderDecision(){
@@ -681,14 +516,14 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     const d = decision;
     if(d.miss){
       const m = document.createElement('div'); m.className = 'miss';
-      m.textContent = (d.exNote ? '今天要下基本單，但已經過了除息日，需要除息日的數據。還缺：' : '還缺：') + d.miss.join('、') + '。';
+      m.textContent = '還缺：' + d.miss.join('、') + '。';
       out.appendChild(m); $('d_apply').disabled = true; return;
     }
     const a = d.action, big = document.createElement('div'); big.className = 'big';
     const unit = Math.round(a.price * 1000), amt = a.n * unit, f = fee(amt);
     if(a.type === 'none') big.textContent = '今天不動作';
-    else if(a.n === 0) big.textContent = a.type === 'base' ? '今天是基本單日，但買不到整張' : '今天觸發加碼，但買不到整張';
-    else big.textContent = `${a.type === 'base' ? '基本單' : '加碼單'}：買 ${a.n} 張（${a.label}）`;
+    else if(a.n === 0) big.textContent = '今天是基本單日，但買不到整張';
+    else big.textContent = `基本單：買 ${a.n} 張（尾盤高掛買進）`;
     out.appendChild(big);
     if(a.n > 0){
       const dt = document.createElement('div');
@@ -700,25 +535,23 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     out.appendChild(ol);
     if(d.isLast){
       const me = document.createElement('div'); me.className = 'monthend';
-      me.textContent = '今天是本月最後交易日：收盤後未用的現金結轉到下個月，下個月第一天記得按「開始新月份」。';
+      me.textContent = '今天是本月最後交易日：收盤後未用的現金留在預算池，下個月第一天記得按「開始新月份」。';
       out.appendChild(me);
     }
-    $('d_apply').disabled = !(a.n > 0 || d.consume || d.setBased);
+    $('d_apply').disabled = !(a.n > 0 || d.setBased);
   }
 
-  // 依輸入的除息日，從行情找出除息日收盤、MA60，以及今天是除息後第幾個交易日
+  // 依輸入的除息日，從行情算出今天是除息後第幾個交易日
   function exInfo(){
-    const none = {hasDiv:false, day:NaN, xclose:NaN, xma:NaN};
+    const none = {hasDiv:false, day:NaN};
     const exd = $('d_exdate').value;
-    if(!exd) return Object.assign(none, exCleared ? {note:exCleared, need:true} : {note:'本月不除息：不需要除息日數據，基本單在月底下。'});
-    if(!market) return Object.assign(none, {note:'行情載入後會帶入除息日數據。'});
-    if(exd > market.date) return Object.assign(none, {note:`除息日 ${exd} 還沒到：不需要除息日數據。`, dayTxt:'還沒除息'});
+    if(!exd) return Object.assign(none, exCleared ? {note:exCleared, need:true} : {note:'本月不除息：基本單在月底下。'});
+    if(!market) return Object.assign(none, {note:'行情載入後會算出今天是除息後第幾個交易日。'});
+    if(exd > market.date) return Object.assign(none, {note:'', dayTxt:'還沒除息'});
     const rows = market.recent, i = rows.findIndex(x => x.date === exd);
     if(i < 0){ const err = `${exd} 不是交易日，請確認除息日。`; return Object.assign(none, {err, note:err}); }
     const day = rows.length - 1 - i;
-    return {hasDiv:true, day, xclose:rows[i].close, xma:rows[i].ma60,
-      note: day === 0 ? '今天是除息日：基本單用今天的乖離。' : '已過除息日：基本單用除息日的乖離。',
-      dayTxt: `今天是除息後第 ${day} 個交易日`};
+    return {hasDiv:true, day, note:'', dayTxt: `今天是除息後第 ${day} 個交易日`};
   }
   // 除息日與最新行情不同月份時清空，讓使用者重新輸入本月除息日
   let exCleared = '';
@@ -733,9 +566,6 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   function syncDivUI(){
     clearStaleExDate();
     const ex = exInfo(), note = $('d_exnote');
-    $('d_xclose').value = ok(ex.xclose) ? ex.xclose : '';
-    $('d_xma').value = ok(ex.xma) ? ex.xma : '';
-    $('d_xclose').closest('fieldset').classList.toggle('off', !ex.hasDiv);
     $('d_exday').textContent = ex.dayTxt || '';
     note.textContent = ex.note; note.classList.toggle('need', !!(ex.err || ex.need));
   }
@@ -750,20 +580,23 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     const d = decision; if(!d || d.miss) return;
     const a = d.action;
     if(a.n > 0){
-      const unit = Math.round(a.price * 1000), amt = a.n * unit;
+      const unit = Math.round(a.price * 1000), amt = a.n * unit, f = fee(amt);
       const sp = ok(g('d_spent')) ? g('d_spent') : 0;
-      $('d_spent').value = Math.round(sp + amt + fee(amt));
+      $('d_spent').value = Math.round(sp + amt + f);
+      // 持倉均價含手續費
+      const h = holding(), sh = h.sh + a.n;
+      $('d_avg').value = px(((h.held ? h.avg * h.sh * 1000 : 0) + amt + f) / (sh * 1000));
+      $('d_shares').value = sh;
     }
     if(d.setBased) $('d_based').checked = true;
-    if(d.consume) $('d_addon').checked = true;
     saveDay(); refreshDay(); scheduleChart();
-    flash('已更新本月帳務。');
+    flash('已更新本月帳務與持倉。');
   });
   $('d_newmonth').addEventListener('click', () => {
     const c = cashInfo();
     if(ok(c.cash)) $('d_carry').value = Math.round(c.cash);
     ['d_exdate','d_div','d_spent'].forEach(id => $(id).value = '');
-    ['d_based','d_addon','d_last','d_dec'].forEach(id => $(id).checked = false);
+    ['d_based','d_last'].forEach(id => $(id).checked = false);
     saveDay(); refreshDay(); scheduleChart();
     flash(ok(c.cash) ? `已把可用現金 ${fmt(c.cash)} 元帶入「上月結轉」。` : '已清空本月狀態，請填上月結轉。');
   });
@@ -787,8 +620,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
         return;
       }
       market = m;
-      $('d_close').value = m.close; $('d_ma5').value = m.ma5; $('d_ma').value = m.ma60;
-      $('d_bbl').value = m.bbLower; $('d_mopen').value = m.monthOpenClose;
+      $('d_close').value = m.close; $('d_bbl').value = m.bbLower; $('d_mopen').value = m.monthOpenClose;
       $('d_mopen_hint').textContent = `${m.monthOpenDate} 的收盤，用來算本月預算`;
       const lag = m.retroDate !== m.date;
       mktStatus(`行情日期 ${m.date}` + (lag ? `（還原日K只到 ${m.retroDate}）` : ''), lag);
@@ -816,17 +648,16 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     if(syncReady && token()){ clearTimeout(pushTimer); pushTimer = setTimeout(push, 1500); setStatus('有未同步的變更…'); }
   }
   function snapshot(){
-    const params = {}; for(const k in DEFAULTS) params[k] = p[k];
+    const params = storedParams();
     const day = {}; DAY_NUM.forEach(id => day[id] = $(id).value); DAY_CHK.forEach(id => day[id] = $(id).checked);
     return {params, day};
   }
   function applyRemote(st){
     applying = true;
     try{
-      if(st.params){
-        p = Object.assign({}, DEFAULTS, FIXED);
-        for(const k in DEFAULTS){ if(k in st.params && typeof st.params[k] === typeof DEFAULTS[k]) p[k] = st.params[k]; }
-        try{ localStorage.setItem(STORE, JSON.stringify(p)); }catch(e){}
+      if(st.params && st.params.v === PARAM_VER){
+        p = Object.assign({}, DEFAULTS); takeParams(st.params);
+        try{ localStorage.setItem(STORE, JSON.stringify(storedParams())); }catch(e){}
       }
       if(st.day){
         DAY_NUM.forEach(id => { $(id).value = typeof st.day[id] === 'string' ? st.day[id] : ''; });
@@ -910,14 +741,14 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   let timer = null;
   function scheduleChart(){ clearTimeout(timer); timer = setTimeout(renderChart, 180); }
   function update(){
-    syncInputs(); updateDayLabels(); refreshDay();
+    syncInputs(); refreshDay();
     scheduleChart();
   }
   const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
   if(mq && mq.addEventListener) mq.addEventListener('change', () => { lastChanged = null; renderChart(); });
   new MutationObserver(() => { lastChanged = null; renderChart(); }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
 
-  loadDay(); syncInputs(); updateDayLabels(); refreshDay();
+  loadDay(); syncInputs(); refreshDay();
   loadMarket();
   syncInit();
   const go = () => renderChart();
