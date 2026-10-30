@@ -219,7 +219,6 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
             <legend>本月現金</legend>
             <div class="field"><label for="d_carry">上月結轉現金（元）<span class="hint">也就是預算池；按「開始新月份」會自動帶入</span></label><input type="number" id="d_carry" step="1" min="0" inputmode="numeric" placeholder="0"></div>
             <div class="field"><label for="d_mopen">月初收盤<span class="hint" id="d_mopen_hint">本月第一個交易日的收盤，用來算本月預算</span></label><input type="number" id="d_mopen" readonly tabindex="-1"></div>
-            <div class="field"><label for="d_div">本月已入帳配息（元）<span class="hint">扣補充保費後的實收，併入預算池</span></label><input type="number" id="d_div" step="1" min="0" inputmode="numeric" placeholder="0"></div>
             <div class="field"><label for="d_spent">本月已花費（元）<span class="hint">含手續費；按「記到本月帳務」會自動累加</span></label><input type="number" id="d_spent" step="1" min="0" inputmode="numeric" placeholder="0"></div>
             <div class="cash-sum" id="d_cashsum"></div>
           </fieldset>
@@ -234,7 +233,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
           <button type="button" id="d_newmonth">開始新月份</button>
           <span class="copied" id="d_msg" aria-live="polite"></span>
         </div>
-        <p class="note">張數計算會先扣手續費（依左側手續費參數）。配息入帳後填進「本月已入帳配息」，會併入預算池。</p>
+        <p class="note">張數計算會先扣手續費（依左側手續費參數）。</p>
       </section>
 
     </div>
@@ -325,7 +324,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   function buildCode(q, rich){
     const P = (k, t) => rich ? `<span class='pv' data-k='${k}'>${t}</span>` : String(t);
     const L = ['flowchart TD'];
-    L.push(`A["每月開始<br/>新增 ${P('budget', q.budget + ' 張')}等值預算<br/>（月初收盤 × ${P('budget', fmt(q.budget*1000))} 股）<br/>已入帳配息併入預算池"]`);
+    L.push(`A["每月開始<br/>新增 ${P('budget', q.budget + ' 張')}等值預算<br/>（月初收盤 × ${P('budget', fmt(q.budget*1000))} 股）"]`);
     L.push(`A --> B["每日尾盤取得<br/>收盤、還原價 BB 下緣"]`);
     L.push(`B --> D{"本月基本單<br/>已經下了？"}`);
     L.push(`D -- 是 --> R["當日結束"]`);
@@ -404,7 +403,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 
   // 收盤價、BB 下緣、月初收盤由 /api/market 帶入，不存也不同步
   // 除息後第幾個交易日由除息日對照行情算出，持倉均價由累計買進金額算出，也不存
-  const DAY_NUM = ['d_exdate','d_carry','d_div','d_spent','d_shares','d_total'];
+  const DAY_NUM = ['d_exdate','d_carry','d_spent','d_shares','d_total'];
   const DAY_CHK = ['d_last','d_based'];
   const DAY_STORE = '00953b-flow-day-v1';
   function saveDay(){
@@ -440,16 +439,15 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 
   function cashInfo(){
     const z = x => ok(x) ? x : 0;
-    const carry = z(g('d_carry')), div = z(g('d_div')), spent = z(g('d_spent')), mopen = g('d_mopen');
+    const carry = z(g('d_carry')), spent = z(g('d_spent')), mopen = g('d_mopen');
     const budget = ok(mopen) && mopen > 0 ? Math.round(mopen * 1000) * p.budget : NaN;
-    return {carry, div, spent, budget, cash: ok(budget) ? carry + budget + div - spent : NaN};
+    return {carry, spent, budget, cash: ok(budget) ? carry + budget - spent : NaN};
   }
   function renderCashSum(){
     const c = cashInfo(), el = $('d_cashsum'); el.innerHTML = '';
     const ln = (a, b, cls) => { const d = document.createElement('div'); d.className = 'ln' + (cls ? ' ' + cls : ''); const s1 = document.createElement('span'); s1.textContent = a; const s2 = document.createElement('span'); s2.textContent = b; d.append(s1, s2); el.appendChild(d); };
     ln('上月結轉（預算池）', fmt(c.carry) + ' 元');
     ln(`本月預算（月初收盤 × ${fmt(p.budget * 1000)} 股）`, ok(c.budget) ? fmt(c.budget) + ' 元' : '填月初收盤');
-    ln('已入帳配息', '＋' + fmt(c.div) + ' 元');
     ln('已花費', '−' + fmt(c.spent) + ' 元');
     ln('可用現金', ok(c.cash) ? fmt(c.cash) + ' 元' : '—', 'total');
   }
@@ -597,7 +595,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   $('d_newmonth').addEventListener('click', () => {
     const c = cashInfo();
     if(ok(c.cash)) $('d_carry').value = Math.round(c.cash);
-    ['d_exdate','d_div','d_spent'].forEach(id => $(id).value = '');
+    ['d_exdate','d_spent'].forEach(id => $(id).value = '');
     ['d_based','d_last'].forEach(id => $(id).checked = false);
     saveDay(); refreshDay(); scheduleChart();
     flash(ok(c.cash) ? `已把可用現金 ${fmt(c.cash)} 元帶入「上月結轉」。` : '已清空本月狀態，請填上月結轉。');
