@@ -193,7 +193,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
 
       <section class="card" aria-label="今日判斷">
         <h2>今日判斷</h2>
-        <p class="sub">收盤價、還原 BB 下緣與月初收盤會自動從日K數據取得；填入本月除息日後，會自動算出今天是除息後第幾個交易日。持有張數與持倉均價按「記到本月帳務」會自動更新，也可以照券商的數字自己改。其餘欄位每天下單前自己填。試撮期間的收盤價是 13:25 前最後一筆成交價，實際成交以收盤價為準。頁面會照流程圖走一遍，並用粗框標出這次走過的路徑。</p>
+        <p class="sub">收盤價、還原 BB 下緣與月初收盤會自動從日K數據取得；填入本月除息日後，會自動算出今天是除息後第幾個交易日。持有張數與累計買進金額按「記到本月帳務」會自動累加，持倉均價由這兩個數字算出；第一次使用請照券商的數字填。其餘欄位每天下單前自己填。試撮期間的收盤價是 13:25 前最後一筆成交價，實際成交以收盤價為準。頁面會照流程圖走一遍，並用粗框標出這次走過的路徑。</p>
         <div class="inputs">
           <fieldset class="grp">
             <legend>今日行情</legend>
@@ -211,7 +211,8 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
           <fieldset class="grp">
             <legend>持倉</legend>
             <div class="field"><label for="d_shares">持有張數</label><input type="number" id="d_shares" step="1" min="0" inputmode="numeric" placeholder="0"></div>
-            <div class="field"><label for="d_avg">持倉均價（元）<span class="hint">每股成本，含手續費</span></label><input type="number" id="d_avg" step="0.0001" min="0" inputmode="decimal"></div>
+            <div class="field"><label for="d_total">累計買進金額（元）<span class="hint">含手續費；按「記到本月帳務」會自動累加</span></label><input type="number" id="d_total" step="1" min="0" inputmode="numeric" placeholder="0"></div>
+            <div class="field"><label for="d_avg">持倉均價（元）<span class="hint">累計買進金額 ÷ 持有股數</span></label><input type="number" id="d_avg" readonly tabindex="-1"></div>
             <div class="calc-line" id="d_costdiff"></div>
           </fieldset>
           <fieldset class="grp">
@@ -402,8 +403,8 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   function maxAff(cash, unit){ let n = 0; while(cost(n + 1, unit) <= cash && n < 10000) n++; return n; }
 
   // 收盤價、BB 下緣、月初收盤由 /api/market 帶入，不存也不同步
-  // 除息後第幾個交易日由除息日對照行情算出，也不存
-  const DAY_NUM = ['d_exdate','d_carry','d_div','d_spent','d_shares','d_avg'];
+  // 除息後第幾個交易日由除息日對照行情算出，持倉均價由累計買進金額算出，也不存
+  const DAY_NUM = ['d_exdate','d_carry','d_div','d_spent','d_shares','d_total'];
   const DAY_CHK = ['d_last','d_based'];
   const DAY_STORE = '00953b-flow-day-v1';
   function saveDay(){
@@ -453,8 +454,9 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     ln('可用現金', ok(c.cash) ? fmt(c.cash) + ' 元' : '—', 'total');
   }
   function holding(){
-    const sh = g('d_shares'), avg = g('d_avg');
-    return {sh: ok(sh) ? sh : 0, avg, held: ok(sh) && sh > 0 && ok(avg) && avg > 0};
+    const sh = g('d_shares'), total = g('d_total');
+    const held = ok(sh) && sh > 0 && ok(total) && total > 0;
+    return {sh: ok(sh) ? sh : 0, total: ok(total) ? total : 0, avg: held ? total / (sh * 1000) : NaN, held};
   }
 
   let decision = null;
@@ -463,6 +465,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     const v = {close:g('d_close'), bbl:g('d_bbl'), day:ex.day, cash:cashInfo().cash};
     const hasDiv = ex.hasDiv, isLast = $('d_last').checked, based = $('d_based').checked;
 
+    $('d_avg').value = h.held ? px(h.avg) : '';
     $('d_costdiff').textContent = h.held && ok(v.close) ? `今日成本差 ${fmtPct((v.close/h.avg-1)*100)}（${v.close >= h.avg ? '成本高' : '成本低'}）` : '';
     renderCashSum();
 
@@ -471,7 +474,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     if(!ok(v.bbl)) miss.push('還原 BB 下緣');
     if(!ok(v.cash)) miss.push('月初收盤');
     if(ex.err) miss.push('正確的本月除息日');
-    if(h.sh > 0 && !h.held) miss.push('持倉均價');
+    if(h.sh > 0 && !h.held) miss.push('累計買進金額');
     if(miss.length) return {miss, path:[]};
 
     const steps = [], path = ['A','B','D'];
@@ -583,10 +586,9 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
       const unit = Math.round(a.price * 1000), amt = a.n * unit, f = fee(amt);
       const sp = ok(g('d_spent')) ? g('d_spent') : 0;
       $('d_spent').value = Math.round(sp + amt + f);
-      // 持倉均價含手續費
-      const h = holding(), sh = h.sh + a.n;
-      $('d_avg').value = px(((h.held ? h.avg * h.sh * 1000 : 0) + amt + f) / (sh * 1000));
-      $('d_shares').value = sh;
+      const h = holding();
+      $('d_total').value = Math.round(h.total + amt + f);
+      $('d_shares').value = h.sh + a.n;
     }
     if(d.setBased) $('d_based').checked = true;
     saveDay(); refreshDay(); scheduleChart();
