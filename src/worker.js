@@ -104,8 +104,6 @@ async function handleMarket() {
   const r20 = retro.slice(-20).map(x => x.close);
   const m20 = mean(r20);
   const sd20 = Math.sqrt(mean(r20.map(x => (x - m20) ** 2)));
-  const month = last.tradeDate.slice(0, 7);
-  const monthFirst = daily.find(x => x.tradeDate.startsWith(month));
   // 最近的每日收盤與 MA60，網頁用來查除息日的數據與除息後第幾個交易日
   const recent = [];
   for (let i = Math.max(59, daily.length - RECENT_DAYS); i < daily.length; i++) {
@@ -122,8 +120,6 @@ async function handleMarket() {
     // 網頁用來算加碼條件的 BB 下緣（倍數可調）
     bbMid: round(m20),
     bbSd: round(sd20, 6),
-    monthOpenDate: monthFirst.tradeDate,
-    monthOpenClose: monthFirst.close,
     recent,
   });
 }
