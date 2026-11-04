@@ -224,7 +224,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
           <button type="button" id="d_newmonth">開始新月份</button>
           <span class="copied" id="d_msg" aria-live="polite"></span>
         </div>
-        <p class="note">頁面只給買進建議，不檢查資金夠不夠。手續費依左側參數估算，用來計算約略成交金額。加碼建議只是提醒，要不要加碼由你決定。買進後請自己更新持倉與本月進度。</p>
+        <p class="note">頁面只給買進建議，不檢查資金夠不夠。加碼建議只是提醒，要不要加碼由你決定。買進後請自己更新持倉與本月進度。</p>
       </section>
 
     </div>
@@ -237,8 +237,7 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   const DEFAULTS = {
     budget:10, lowAdd:2,
     wait:1,
-    addLots:10, addBB:1.5,
-    feeRate:0.1425, feeDisc:0.28, feeMin:1
+    addLots:10, addBB:1.5
   };
   const GROUPS = [
     {title:'基本單', fields:[
@@ -249,11 +248,6 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
     {title:'加碼單', fields:[
       {k:'addLots', label:'加碼張數', min:1, max:30, step:1},
       {k:'addBB', label:'加碼 BB 倍數', hint:'收盤 ≤ 還原 BB(20) 中線 − 此值 × 標準差', min:0.5, max:3, step:0.1},
-    ]},
-    {title:'手續費（用於估算成交金額）', fields:[
-      {k:'feeRate', label:'手續費率（%）', min:0, max:1, step:0.0001},
-      {k:'feeDisc', label:'折扣', hint:'2.8 折填 0.28', min:0.01, max:1, step:0.01},
-      {k:'feeMin', label:'最低手續費（元）', min:0, max:100, step:1}
     ]}
   ];
   const STORE = '00953b-flow-params-v1';
@@ -395,8 +389,6 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
   }
 
   /* ---------- 今日判斷 ---------- */
-  function fee(amount){ return amount <= 0 ? 0 : Math.max(p.feeMin, Math.floor(amount * p.feeRate / 100 * p.feeDisc)); }
-
   // 收盤價、BB 下緣由 /api/market 帶入，不存也不同步
   // 除息後第幾個交易日由除息日對照行情算出，持倉均價由累計買進金額算出，也不存
   const DAY_NUM = ['d_exdate','d_shares','d_total','d_baseprice'];
@@ -503,13 +495,13 @@ input[readonly]{background:transparent;border-style:dashed;cursor:default}
       out.appendChild(m); return;
     }
     const a = d.action, big = document.createElement('div'); big.className = 'big';
-    const unit = Math.round(a.price * 1000), amt = a.n * unit, f = fee(amt);
+    const amt = a.n * Math.round(a.price * 1000);
     if(a.type === 'none') big.textContent = '今天不動作';
     else big.textContent = a.type === 'addon' ? `加碼建議：買 ${a.n} 張（尾盤高掛買進）` : `基本單：買 ${a.n} 張（尾盤高掛買進）`;
     out.appendChild(big);
     if(a.n > 0){
       const dt = document.createElement('div');
-      let t = `價格 ${px(a.price)}，成交約 ${fmt(amt)} 元，手續費約 ${fmt(f)} 元，共約 ${fmt(amt + f)} 元`;
+      let t = `價格 ${px(a.price)}，成交約 ${fmt(amt)} 元`;
       if(a.type === 'addon') t += '。要不要加碼由你決定';
       dt.textContent = t;
       out.appendChild(dt);
